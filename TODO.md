@@ -1,3 +1,6 @@
+- [x] Preserve agent composer focus and history position during workflow and
+  advanced Surfboard refreshes; cover sidebar, chat tile and detached-window polling.
+
 - [x] Add OpenCode ACP as a selectable backend, including local configured models,
   scoped tools, approvals, durable sessions and UI capability handling.
 

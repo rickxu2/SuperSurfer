@@ -1,3 +1,28 @@
+# Agent chat refresh continuity — October 29, 2026
+
+Reproduced history movement in workflow chat and composer focus loss in the
+advanced Surfboard view before the fix. Both paths unnecessarily appended the
+existing chat panel on refresh. They now leave it in its current host.
+
+`tests/agent-refresh.browser.cjs` passed in Chrome on macOS across the overview
+sidebar, workflow, advanced Surfboard, chat tile and detached window. It checks
+focus, backward selection, draft text, continued typing and a scrolled history
+position across ordinary chat updates and five-second state polls. The service
+uses temporary projects and a fake provider; no authenticated inference is tested.
+The detached case explicitly reveals the agent sidebar after initialization.
+
+`TMPDIR=/private/tmp npm test` with Python 3.13 passed: 765 Python tests
+(34 skipped), 49 Node tests (5 skipped). Initial runs using macOS's symlinked
+`/var/folders` temp path failed fixture path assertions; the canonical temp path
+resolved those failures. Skill validation and `git diff --check` passed.
+
+`npm run package:mac` produced the arm64 app and ZIP under `dist/`.
+`node tests/mac-package.electron.cjs` passed strict signature checks and isolated
+setup launches for both original and ZIP-extracted bundles. Signing is ad hoc,
+not Developer ID signing or notarization. The live workspace was not restarted.
+The applied board's checks block has no command, so it returned a configuration
+error; these are direct process receipts, not a board check receipt.
+
 # OpenCode provider — October 19, 2026
 
 OpenCode ACP is now selectable in new chats, role defaults and account setup.

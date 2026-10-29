@@ -1,3 +1,9 @@
+# Agent chat refresh continuity — October 29, 2026
+
+Background state/chat refreshes retain composer focus, selection, unsent text and
+message-history reading position. Workflow and advanced Surfboard views leave the
+chat panel in its existing host; they move it only when its destination changes.
+
 # OpenCode backend
 
 OpenCode is a selectable, durable backend for new chats and role defaults. Its
