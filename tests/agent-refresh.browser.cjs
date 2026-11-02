@@ -30,9 +30,9 @@ with tempfile.TemporaryDirectory() as directory:
   for(const mode of (process.env.AGENT_REFRESH_MODES||'overview,workflow,surfboard,conversation,detached').split(',')){
    const page=await browser.newPage({viewport:{width:1400,height:950}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.addInitScript(({token,pid,eid,mode})=>{sessionStorage.setItem('supersurfer-token',token);localStorage.setItem('supersurfer-workspace',JSON.stringify({view:'workspace',projectId:pid,experimentId:eid,tab:mode==='detached'?'conversation':mode,chatVisible:true}));},{token,pid,eid,mode});
-   let reads=0,stateReads=0;
+   let reads=0,stateReads=0,showQuestions=false,questionPolls=0;
    await page.route('**/api/state',route=>route.fulfill({json:{...snapshot,settings:{...snapshot.settings,fixture_refresh:++stateReads}}}));
-   await page.route('**/api/chat?*',route=>route.fulfill({json:{busy:false,agent:{name:'Test worker'},messages:Array.from({length:60},(_,i)=>({id:'m'+i,role:i%2?'assistant':'user',created:1700000000+i,text:'History '+i+'\n\n'+'Preserve the reading position. '.repeat(15)})),questions:[],approvals:[],refresh:++reads}}));
+   await page.route('**/api/chat?*',route=>route.fulfill({json:{busy:false,agent:{name:'Test worker'},messages:Array.from({length:60},(_,i)=>({id:'m'+i,role:i%2?'assistant':'user',created:1700000000+i,text:'History '+i+'\n\n'+'Preserve the reading position. '.repeat(15)})),questions:showQuestions?[{id:'decision',status:'pending',can_answer:true,updated:++questionPolls,questions:[{id:'direction',question:'What should this Surfboard do?',options:[]},{id:'details',question:'Additional context',options:[]}]},...(questionPolls>1?[{id:'followup',status:'pending',can_answer:true,questions:[{id:'later',question:'A separate question arrived',options:[]}]}]:[])]:[],approvals:[],refresh:++reads}}));
    await page.goto(origin+(mode==='detached'?`/?panel_project=${pid}&panel_item=${eid}&panel_page=conversation&panel_tile=agent`:''));
    if(mode==='detached'){await page.locator('#main-chat-host #chat-panel').waitFor({state:'attached'});await page.keyboard.press('Control+Shift+B');await page.keyboard.press('Control+Shift+B');}
    await page.locator('#chat-messages .message').last().waitFor();
@@ -48,6 +48,22 @@ with tempfile.TemporaryDirectory() as directory:
    assert.deepEqual(await input.evaluate(el=>[el.selectionStart,el.selectionEnd,el.selectionDirection]),[6,14,'backward'],mode+' selection changed');
    assert.ok(Math.abs(await page.locator('#chat-messages').evaluate(el=>el.scrollTop)-top)<2,mode+' history moved from '+top+' to '+await page.locator('#chat-messages').evaluate(el=>el.scrollTop));
    await page.keyboard.type(' replacement ');assert.equal(await input.inputValue(),'Draft  replacement  background refresh');
+   if(['workflow','surfboard'].includes(mode)){
+    showQuestions=true;const answer=page.getByRole('textbox',{name:'What should this Surfboard do?',exact:true});await answer.waitFor();
+    const draft='My workflow answer\n'.repeat(30);await answer.fill(draft);await answer.focus();
+    await answer.evaluate(el=>{el.setSelectionRange(10,18,'backward');el.scrollTop=90;window.retainedQuestionInput=el;});
+    const top=await page.locator('#chat-questions').evaluate(el=>{el.scrollTop=25;return el.scrollTop;});
+    await page.waitForTimeout(6500);
+    assert.ok(questionPolls>1,'Must receive question refreshes');
+    assert.equal(await answer.evaluate(el=>el===window.retainedQuestionInput),true,mode+' replaced an unchanged question field');
+    assert.equal(await answer.evaluate(el=>document.activeElement===el),true,mode+' question lost focus');
+    assert.equal(await answer.inputValue(),draft);
+    assert.deepEqual(await answer.evaluate(el=>[el.selectionStart,el.selectionEnd,el.selectionDirection]),[10,18,'backward']);
+    assert.ok(Math.abs(await page.locator('#chat-questions').evaluate(el=>el.scrollTop)-top)<2,mode+' questions scrolled');
+    assert.equal(await answer.evaluate(el=>el.scrollTop),90,mode+' answer text scrolled');
+    await page.keyboard.type('new text');assert.ok((await answer.inputValue()).includes('new text'));
+    console.log('PASS '+mode+' question focus, selection, draft and both scroll positions survive metadata updates and a new question');
+   }
    assert.deepEqual(errors,[]);console.log('PASS '+mode+' keeps focus, selection, draft and reading position across polling');await page.close();
   }
  }finally{await browser?.close();child.stdin.end();child.kill();}

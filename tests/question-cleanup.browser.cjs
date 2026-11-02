@@ -64,6 +64,7 @@ const root = path.resolve(__dirname, '..');
     console.log('PASS expired question disappears on first load; composer/history/unrelated draft preserved');
 
     questions = [question('live')]; busy = true; await refresh();
+    await page.locator('[data-question-request=live]').waitFor();
     await page.getByRole('textbox', { name: 'Which evidence should we inspect?' }).fill('Keep my current answer');
     await page.getByLabel('Private detail?', { exact: true }).fill('SECRET-FIXTURE-DRAFT');
     assert.ok(!JSON.stringify(await drafts()).includes('SECRET-FIXTURE-DRAFT'));
@@ -78,6 +79,7 @@ const root = path.resolve(__dirname, '..');
 
     for (const ending of ['unavailable', 'cancelled', 'answered', 'removed']) {
       questions = [question(ending)]; busy = true; await refresh();
+      await page.locator('[data-question-request="'+ending+'"]').waitFor();
       await page.getByRole('textbox', { name: 'Which evidence should we inspect?' }).fill('Draft for ' + ending);
       questions = ending === 'removed' ? [] : questions.map(q => ({ ...q, status: ending, can_answer: false })); busy = false;
       await refresh(); await noCard();
@@ -87,6 +89,7 @@ const root = path.resolve(__dirname, '..');
     console.log('PASS disconnect/stop/answer/removal clear the card and scoped drafts without blocking new messages');
 
     questions = [question('answer-race')]; busy = true; await refresh();
+    await page.locator('[data-question-request=answer-race]').waitFor();
     await page.getByRole('textbox', { name: 'Which evidence should we inspect?' }).fill('Evidence');
     await page.getByLabel('Private detail?', { exact: true }).fill('Private');
     await page.getByRole('button', { name: 'Answer & continue', exact: true }).click();

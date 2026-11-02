@@ -1,3 +1,31 @@
+# Surfboard question input continuity — November 2, 2026
+
+The earlier composer fix did not cover Questions for you. Reproduced replacement
+of an active question textarea on the previously fixed branch during polling.
+Question cards now reconcile by conversation/request identity and question schema;
+unchanged inputs remain connected. State-only updates patch title, disabled,
+busy/error and availability notices in place. Retired cards are still removed.
+
+Extended `tests/agent-refresh.browser.cjs` passed all five prior contexts plus
+workflow and advanced Surfboard question inputs, checking node identity, focus,
+backward selection, multiline draft, continued typing, question-pane scroll and
+textarea scroll during metadata updates and another incoming card.
+`tests/question-cleanup.browser.cjs` passed expiration, disconnect/reload, secret
+non-persistence, cancellation, answer/removal and failed-answer cleanup. Its
+refresh steps now wait for the specific request card before entering an answer,
+preventing a race that typed into the previous request.
+
+Canonical-temp full suite passed: 765 Python tests (34 skipped), 49 Node tests
+(5 skipped). Skill and whitespace checks passed. These are direct checks; the
+board checks block still has no configured command and returned that error.
+All browser/provider data came from isolated fixtures; no live inference ran.
+
+`npm run package:mac` built the follow-up macOS arm64 app and ZIP.
+`node tests/mac-package.electron.cjs` passed strict signatures and isolated setup
+launches for original and extracted bundles. Deliverables are copied to the
+original checkout's `dist/agent-question-fix/`. Signing remains ad hoc, without
+Developer ID signing or notarization. The live workspace was not restarted.
+
 # Agent chat refresh continuity — October 29, 2026
 
 Reproduced history movement in workflow chat and composer focus loss in the

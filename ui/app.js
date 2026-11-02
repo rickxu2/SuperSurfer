@@ -1323,13 +1323,31 @@ function renderChatQuestions(){
   container.dataset.signature=signature;container.hidden=!shown.length;
   if(!shown.length){container.replaceChildren();return;}
   const scroll=container.scrollTop;
-  container.innerHTML=shown.map((request,requestIndex)=>{
+  // Question metadata and other cards can change while the user is typing.
+  // Keep each unchanged form connected, including its native focus/scroll state.
+  const existing=new Map([...container.children].map(form=>[questionKey(form.dataset.questionScope,form.dataset.questionRequest),form]));
+  const cards=shown.map((request,requestIndex)=>{
     const key=questionKey(scope,request.id),busy=questionBusy.has(key),disabled=request.can_answer===false||busy||readOnly()||scope?.startsWith('agent:'),error=questionErrors.get(key);
-    return `<form class="question-card" data-question-request="${e(request.id)}" data-question-scope="${e(scope)}"><div class="question-heading">${icon('message')}<strong>${e(request.title||'Question for you')}</strong><span>Awaiting answer</span></div>${(request.questions||[]).map((question,index)=>{
+    const cardSignature=JSON.stringify([scope,request.questions]);
+    const current=existing.get(key);
+    if(current?.dataset.signature===cardSignature){
+      $('.question-heading strong',current).textContent=request.title||'Question for you';
+      for(const field of $$('fieldset',current))field.disabled=!!disabled;
+      const button=$('button[type="submit"]',current);button.disabled=!!disabled;button.textContent=busy?'Sending…':'Answer & continue';
+      const notice=$('.question-error',current);notice.textContent=error||'';notice.hidden=!error;
+      $('.question-note',current).hidden=request.can_answer!==false;
+      return current;
+    }
+    const template=document.createElement('template');
+    template.innerHTML=`<form class="question-card" data-question-request="${e(request.id)}" data-question-scope="${e(scope)}"><div class="question-heading">${icon('message')}<strong>${e(request.title||'Question for you')}</strong><span>Awaiting answer</span></div>${(request.questions||[]).map((question,index)=>{
       const draft=questionDraft(scope,request,question),options=question.options||[],choice=typeof draft.choice==='string'?draft.choice:'',text=typeof draft.text==='string'?draft.text:'',free=!options.length,other=question.isOther===true,fieldId=`question-${requestIndex}-${index}`;
       return `<fieldset class="question-field" data-question-index="${index}" ${disabled?'disabled':''}><legend>${question.header?`<span>${e(question.header)}</span>`:''}${e(question.question||'Your answer')}</legend>${options.map((option,optionIndex)=>`<label class="question-option"><input type="radio" name="${fieldId}" value="${optionIndex}" ${choice===String(optionIndex)?'checked':''} required><span><strong>${e(option.label)}</strong>${option.description?`<small>${e(option.description)}</small>`:''}</span></label>`).join('')}${!free&&other?`<label class="question-option"><input type="radio" name="${fieldId}" value="other" ${choice==='other'?'checked':''} required><span><strong>Write another answer</strong></span></label>`:''}${free||other?`${question.isSecret?`<input type="password" data-question-text autocomplete="off" maxlength="16000" value="${e(text)}" aria-label="${e(question.question||'Your answer')}" placeholder="Enter your answer" ${free||choice==='other'?'required':'hidden'}>`:`<textarea data-question-text rows="2" maxlength="16000" aria-label="${e(question.question||'Your answer')}" placeholder="${free?'Write your answer…':'Your alternative…'}" ${free||choice==='other'?'required':'hidden'}>${e(text)}</textarea>`}`:''}${question.isSecret?'<small class="question-secret-note">Secret drafts stay in memory and are lost on reload.</small>':''}</fieldset>`;
-    }).join('')}${request.can_answer===false?'<p class="question-note">This question cannot be answered from the current connection.</p>':''}<div class="question-error" role="alert" ${error?'':'hidden'}>${e(error||'')}</div><div class="question-footer"><span>Your answer continues this conversation.</span><button class="button primary small-button" type="submit" ${disabled?'disabled':''}>${busy?'Sending…':'Answer & continue'}</button></div></form>`;
-  }).join('');container.scrollTop=scroll;
+    }).join('')}<p class="question-note" ${request.can_answer===false?'':'hidden'}>This question cannot be answered from the current connection.</p><div class="question-error" role="alert" ${error?'':'hidden'}>${e(error||'')}</div><div class="question-footer"><span>Your answer continues this conversation.</span><button class="button primary small-button" type="submit" ${disabled?'disabled':''}>${busy?'Sending…':'Answer & continue'}</button></div></form>`;
+    const form=template.content.firstElementChild;form.dataset.signature=cardSignature;return form;
+  });
+  for(const form of [...container.children])if(!cards.includes(form))form.remove();
+  cards.forEach((form,index)=>{const before=container.children[index]||null;if(before!==form){if(container.moveBefore&&form.isConnected)container.moveBefore(form,before);else container.insertBefore(form,before);}});
+  container.scrollTop=scroll;
 }
 async function answerQuestion(event){
   event.preventDefault();const form=event.target.closest('form[data-question-request]');if(!form)return;

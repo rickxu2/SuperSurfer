@@ -1,3 +1,6 @@
+- [x] Preserve Questions for you input focus, selection and scrolling in the
+  Surfboard configurator across metadata refreshes and incoming question cards.
+
 - [x] Preserve agent composer focus and history position during workflow and
   advanced Surfboard refreshes; cover sidebar, chat tile and detached-window polling.
 

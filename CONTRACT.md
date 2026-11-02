@@ -3,6 +3,9 @@
 Background state/chat refreshes retain composer focus, selection, unsent text and
 message-history reading position. Workflow and advanced Surfboard views leave the
 chat panel in its existing host; they move it only when its destination changes.
+Pending question cards retain their input nodes while their question schema is
+unchanged. Metadata, title, busy/error and permission updates refresh card state
+without rebuilding unaffected fields; new or retired cards do not replace peers.
 
 # OpenCode backend
 

@@ -21,3 +21,13 @@ The browser regression covers overview sidebar, workflow, advanced Surfboard,
 chat tile and detached window using temporary projects and simulated messages.
 It checks focus, selection direction, typing, unsent draft and reading position.
 No live provider credentials, user messages or source excerpts are included here.
+
+## November 2 follow-up: Questions for you
+
+The question renderer replaced its complete form list when request metadata
+changed or another card appeared. On the branch with the earlier composer fix,
+a browser regression reproduced replacement of the active answer textarea.
+Reconcile each card by scoped request identity and question schema, updating
+state-only UI in place. The extended regression verifies native input identity,
+focus/selection, draft text and both question-container and textarea scroll.
+The existing cancellation, expiration and secret-draft checks also pass.
