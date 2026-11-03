@@ -159,7 +159,7 @@ for line in sys.stdin:
 class CodexBridgeTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name)
+        self.root = Path(self.tmp.name).resolve()
         self.repo = self.root / 'repo'; self.repo.mkdir()
         self.doc = self.root / 'docs' / 'experiment.md'; self.doc.parent.mkdir(); self.doc.write_text('# Experiment\n')
         self.log = self.root / 'requests.jsonl'

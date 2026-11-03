@@ -1,3 +1,69 @@
+# Sidebar quota strip — October 27, 2026
+
+The new isolated `tests/sidebar-quota.browser.cjs` verifies linked-only rows outside
+Settings, separate short/long percentages and opacity fills, quota zero versus
+unknown/expired values, stale transport errors, link/unlink changes, empty hiding,
+window/reset accessibility text, detail navigation and light/dark responsive layout.
+The initial fixture passed and its screenshots were visually inspected at 1400 px
+and 850 px. The strip sits directly below Settings with one compact bar per provider.
+It shares existing account observations and refreshes only in a visible UI window;
+no agent turn, model inference, saved wakeup or live workspace restart is used.
+Final configured build/check/preview and updated packaged-app evidence is recorded
+in the task Review. Earlier provider-metric deferrals and skipped PR remain intact.
+
+# Provider usage and manual agents — October 26, 2026
+
+Completion audit reopened the original all-provider quota/tokens/cost requirement
+rather than treating unavailable placeholders as full delivery. Follow-up code
+adds Codex account lifetime tokens, Claude's official experimental `get_usage`
+control (no prompt/session/transcript scan) and OpenCode sanitized owned-session
+native aggregates. Nine feature regressions pass. A real read-only metadata call
+using this host's Claude Code 2.1.310 returned two available plan-quota windows,
+without inference. Cursor and OpenCode account-quota coverage still depends on
+the user's account/API/upstream provider; Codex account reads do not expose USD cost.
+Updated full-suite, package and UI evidence is recorded in the task Review.
+The user subsequently explicitly deferred Cursor metrics, OpenCode quota and
+Codex dollar costs. The remaining agreed scope is delivered. Audit checks passed
+774 Python tests in total (34 skipped) and 49 Node tests (5 skipped); the configured
+seven-fixture browser preview and original/ZIP-extracted Mac app checks passed.
+
+Initial implementation validation before the completion-audit additions:
+
+Feature regressions cover durable per-provider observations, cumulative-sample
+deduplication, Claude turn tokens versus session costs, ACP context occupancy
+exclusion, quota zero versus missing values, numeric/credential allowlisting,
+optional quota-read failure, idle creation, scope/read-only enforcement, backend
+persistence and stable creation receipts. Six new Python regressions passed.
+The existing 12 conversation and 46 backend regressions also passed.
+
+`tests/provider-usage-agents.browser.cjs` passed named idle creation, provider/task
+selection from both project and task views, unchanged retry IDs after failure,
+reload visibility, read-only controls, usage provenance, zero versus unavailable,
+refresh failure and responsive layout. It uses isolated fixtures, not real provider
+accounts. `SUPERSURFER_TEST_UI_ROOT` can point it at the UI extracted from a built
+workspace archive to check the delivered assets. Screenshots are saved under
+`/tmp/supersurfer-new-agent.png` and `/tmp/supersurfer-provider-usage.png`.
+
+The ordinary suite passed 771 Python tests (34 skipped) and 49 Node tests (5
+skipped) after correcting existing Mac temporary-path fixture assumptions and
+installing rsync 3.4.1 (`--protect-args` is absent in Apple's bundled rsync).
+Use Python 3.11+; this Mac's `/usr/bin/python3` is 3.9, while
+`$HOME/.local/bin/python3` is 3.13.17. Node 22.22.0 and Playwright Chromium were
+installed for local verification. Configured source-bound receipts, final build
+paths and subsequent packaged-app/browser checks are recorded in the task Review.
+
+An Apple Silicon `npm run package:mac` build succeeded. The packaged-app regression
+passed strict signatures, isolated-profile launch, setup readiness and renderer
+sandbox checks for both the original app and ZIP-extracted app. This is local
+ad-hoc signing; no Developer ID notarization, Gatekeeper download guarantee,
+authenticated provider billing integration or live workspace restart is claimed.
+
+Remaining limits: Cursor/OpenCode generic account quota, Codex dollar costs and
+Cursor ACP consumed-token totals are unavailable. Claude costs
+are native session estimates and its result tokens cover the main agent only.
+Native-owner usage and external sessions are excluded. Missing telemetry is never
+reported as zero, and host consumption can span accounts and resumed activity.
+
 # OpenCode provider — October 19, 2026
 
 OpenCode ACP is now selectable in new chats, role defaults and account setup.

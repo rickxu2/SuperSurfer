@@ -166,7 +166,7 @@
 .panel-palette-menu{position:relative;font-size:11px}.panel-palette-menu>summary{cursor:pointer;padding:5px 9px;border:1px solid var(--line);border-radius:7px;list-style:none;white-space:nowrap}
 .panel-palette-menu>.tile-palette{position:absolute;right:0;top:100%;z-index:30;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:8px;min-width:280px;border:1px solid var(--line);border-radius:10px;background:var(--bg);box-shadow:var(--panel-shadow)}
 .tile-space-menu{position:relative;margin-left:auto}.tile-space-menu>summary{cursor:pointer;font-size:14px;list-style:none}
-.tile-space-menu>div{position:fixed;z-index:60;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px;display:grid;gap:3px}
+.tile-space-menu>div{position:absolute;top:calc(100% + 6px);right:0;z-index:60;box-shadow:var(--shadow);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px;display:grid;gap:3px}
 .dock-canvas>.page-tile:has(.tile-space-menu[open]){overflow:visible;z-index:20}.tile-space-menu button{font:inherit;padding:5px 9px;text-align:left;color:var(--text);white-space:nowrap}
 .topbar:has(.panel-palette-menu[open]){position:relative;z-index:50;overflow:visible}
 

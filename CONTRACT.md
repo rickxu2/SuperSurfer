@@ -1,3 +1,50 @@
+# Provider usage and manual worker creation
+
+Settings account responses include allowlisted usage observations. Codex quota
+comes from `account/rateLimits/read`, with remaining percentages, window/reset
+times and observation time. Failure of this optional read does not sign out a
+valid account. Codex `account/usage/read` lifetime tokens are displayed separately
+from host observations. Claude plan quota is read with its official experimental
+`get_usage` CLI control, skipping transcript behavior scans and sending no prompt.
+Unsupported/older CLIs and ineligible accounts fall back to unavailable. Cursor
+and OpenCode do not provide a generic account quota read through ACP; the UI links
+to provider usage/configuration instead.
+No credential scraping, private billing endpoint or inference is used to monitor.
+
+Linked backends also appear directly below Settings in the navigation sidebar.
+Each compact quota row has one track with a darker short-window fill and a lighter
+long-window fill, plus the two remaining percentages. Tooltip/accessibility text
+names the windows, reset times, source and observation time. Unlinked providers
+and an empty strip are hidden; linked providers without quota show unavailable.
+Expired windows show unknown until refreshed, not a fabricated zero or reset.
+Transport errors retain the last linked identity with a visible stale marker;
+an explicit signed-out response removes the row. A manual refresh and one-minute
+visible-window polling update shared Settings/sidebar observations without an
+agent turn or persistent wakeup. Closing the UI stops this polling. Clicking a
+row opens detailed usage in Settings.
+
+Consumption is durable per provider on this workspace host, across logins, and
+excludes native-owner agents, other clients and unreported activity. Codex thread
+token totals and ACP USD session costs replace cumulative samples. Claude result
+tokens are per main-agent turn; result USD costs are cumulative session estimates,
+including resumed spend. Replays do not add samples twice. Context-window occupancy
+is never labeled consumed tokens or account quota. Unknown is distinct from zero;
+timestamps and stale/failed refresh states remain visible. Costs are provider
+estimates, not invoices or a conversion of token counts to dollars.
+OpenCode also reads sanitized exports of the exact owned session after a turn,
+using the native aggregate tokens/cost when available. It never lists other
+sessions, stores transcript contents or adds exported cost to ACP cost twice.
+
+The manual New agent dialog is available from project and task agent lists. It
+requires a work item in that project and creates an idle SuperSurfer-owned worker
+with an optional explicit backend. Conversation registration, backend preference
+and an optional stable request receipt persist together. Retrying the same request
+returns the same scope; changed details with that ID conflict. Read-only mutation
+restrictions and project/task membership are checked by the service. This does
+not create native-owner agents, start inference, configure wakeups or queue runs.
+Preparation, explicit queue requests and autonomous suggestions retain their
+existing separate authorization rules.
+
 # OpenCode backend
 
 OpenCode is a selectable, durable backend for new chats and role defaults. Its

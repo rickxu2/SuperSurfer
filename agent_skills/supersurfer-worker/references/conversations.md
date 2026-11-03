@@ -5,7 +5,35 @@ input/approval is needed, and Idle means no active model turn. There is no Finis
 agent state. Experiment planning, run status and deliverables are independent;
 one failed run or idle chat does not make the experiment failed or complete.
 
-Each owned SuperSurfer conversation uses Codex, Cursor or Claude Code and retains
+The manual **New agent** dialog on a project/task agent list creates an idle
+SuperSurfer worker in a selected work item, with a name and provider. Creation
+does not send a message, start inference, queue a run or schedule recurring work.
+The UI retains the same request ID on a failed creation retry. Do not create a
+second owner to recover uncertain delivery. Native-owner agents cannot be created
+or migrated through this dialog. Existing scope, permissions and explicit queue
+authorization still apply to the created worker.
+
+**Settings → Coding backends → Usage & remaining quota** shows provider observations,
+with a compact linked-provider quota strip directly below sidebar Settings.
+Each row shows two remaining percentages: darker short-window and lighter
+long-window fills. Hover/focus exposes window/reset/provenance details; clicking
+opens Settings. Unlinked providers are hidden. Unknown/expired values are not zero,
+and a stale marker preserves last observations after transport errors. The strip's
+minute refresh runs only while the UI window is visible; it is not a persistent
+agent monitoring rule or authority to start work.
+
+The usage details show provider observations,
+not complete account billing. Codex can report quota windows, account lifetime
+tokens and separate owned-thread observations. Claude can report main-agent turn
+tokens, session cost estimates and plan quota through an experimental native control.
+OpenCode can report native token/cost aggregates from sanitized exports of its
+owned session. ACP can optionally report USD cost; context occupancy is not
+consumption. Cursor/OpenCode generic account quota, Cursor ACP consumed-token
+totals, Codex dollar cost and native-owner usage remain unavailable. Never
+infer zero from missing data or a remaining quota from tokens/cost. Refresh updates
+observations without starting inference; check source, time, scope and stale state.
+
+Each owned SuperSurfer conversation uses Codex, Cursor, Claude Code or OpenCode and retains
 that provider's native session. A role default selects the backend for new work;
 it does not transfer an existing session. Start a new conversation to use another
 provider, carrying only the explicitly intended task/context. Provider selection
@@ -13,7 +41,7 @@ is pinned once work starts; an unsuccessful sign-in before any message/session
 starts does not move an existing owner. If Cursor cannot resume its saved native
 session, update its CLI rather than substituting a fresh session or replaying
 history. Never recreate an
-owner to recover an uncertain submission. All three providers use the same
+owner to recover an uncertain submission. All four providers use the same
 server-enforced scoped MCP tools: changing backend changes neither project/task
 boundaries nor preparation, queue, recovery or delegation authority.
 

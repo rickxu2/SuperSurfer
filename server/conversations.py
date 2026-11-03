@@ -10,7 +10,7 @@ import threading
 import time
 import uuid
 from .time_context import validate_timezone
-from . import tasks as task_log, agent_edits
+from . import tasks as task_log, agent_edits, usage
 
 class BridgeError(RuntimeError):
     def __init__(self, message, status=503):
@@ -121,6 +121,7 @@ class ConversationBridge:
         self._db.execute("CREATE TABLE IF NOT EXISTS chats (scope TEXT PRIMARY KEY, body TEXT NOT NULL)")
         self._db.commit()
         agent_edits.initialize(self._db)
+        usage.initialize(self._db)
         self._chats = {scope: json.loads(body) for scope, body in self._db.execute("SELECT scope,body FROM chats")}
         for chat in self._chats.values():
             if not chat.get("edit_history_imported"):

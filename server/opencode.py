@@ -12,12 +12,36 @@ import time
 
 from .cli_backends import CliBridge, executable
 from .conversations import BridgeError
+from . import usage
 
 
 class OpenCodeBridge(CliBridge):
     def __init__(self, *args, **kwargs):
         self._catalog_cache = None
         super().__init__(*args, **kwargs)
+
+    def observe_usage(self, session_id, cwd):
+        """Read only the owned session's sanitized native aggregate, never infer."""
+        if not isinstance(session_id, str) or not session_id or session_id.startswith("-") or len(session_id) > 256:
+            return
+        try:
+            result = subprocess.run([executable(self.backend), "export", session_id, "--sanitize"],
+                                    cwd=cwd, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=10)
+            if result.returncode or len(result.stdout) > 8_000_000:
+                return
+            value = json.loads(result.stdout)
+            info = value.get("info") if isinstance(value, dict) else None
+            if not isinstance(info, dict) or info.get("id") != session_id:
+                return
+            tokens = info.get("tokens")
+            if isinstance(tokens, dict) and isinstance(tokens.get("cache"), dict):
+                counts = [usage.number(tokens.get(key)) for key in ("input", "output", "reasoning")]
+                counts += [usage.number(tokens["cache"].get(key)) for key in ("read", "write")]
+                if all(count is not None for count in counts):
+                    usage.record(self, "tokens", session_id, sum(counts), "OpenCode sanitized session export (native aggregate)")
+            usage.record(self, "cost_usd", session_id, info.get("cost"), "OpenCode sanitized session export (session estimate)")
+        except (BridgeError, OSError, ValueError, subprocess.TimeoutExpired):
+            pass  # Optional telemetry must never fail or replay completed work.
 
     def _catalog(self, refresh=False):
         with self._account_lock:

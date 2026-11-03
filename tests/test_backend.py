@@ -162,7 +162,7 @@ class FakeManager:
 class BackendTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name)
+        self.root = Path(self.tmp.name).resolve()
         self.repo = self.root / "repo"
         self.repo.mkdir()
         self.manager = FakeManager(self.repo)

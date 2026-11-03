@@ -159,9 +159,20 @@ class Store:
                 raise KeyError("Conversation not found")
             return json.loads(row[0])
 
-    def create_conversation(self, experiment_id, name=None):
+    def create_conversation(self, experiment_id, name=None, backend=None, request_id=None):
+        if backend is not None and (not isinstance(backend, str) or backend not in {"codex", "cursor", "claude", "opencode"}):
+            raise ValueError("Choose codex, cursor, claude or opencode")
+        if request_id is not None and (not isinstance(request_id, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{16,100}", request_id)):
+            raise ValueError("request_id must be a stable random identifier")
         with self.lock, self.db:
             experiment = self._data(experiment_id)
+            request = {"experiment_id": experiment_id, "name": name, "backend": backend}
+            if request_id:
+                previous = self.get("agent_create:" + request_id)
+                if previous:
+                    if previous["request"] != request:
+                        raise Conflict("Creation request already used with different agent details")
+                    return self.conversation(previous["scope"])
             if name is None:
                 name = f"{experiment['name']} agent {len(self.conversations(experiment_id)) + 2}"
             if not isinstance(name, str) or not name.strip() or len(name) > 160 or any(c in name for c in "\0\r\n"):
@@ -170,6 +181,10 @@ class Store:
             data = {"scope": "conversation:" + str(uuid.uuid4()), "experiment_id": experiment_id,
                     "name": name.strip(), "created_at": now, "updated_at": now}
             self.db.execute("INSERT INTO conversations VALUES(?,?,?)", (data["scope"], experiment_id, json.dumps(data)))
+            if backend:
+                self.db.execute("INSERT INTO kv VALUES(?,?)", ("chat_settings:" + data["scope"], json.dumps({"backend": backend})))
+            if request_id:
+                self.db.execute("INSERT INTO kv VALUES(?,?)", ("agent_create:" + request_id, json.dumps({"request": request, "scope": data["scope"]})))
             experiment["selected_agent_scope"] = data["scope"]
             self._write_data(experiment)
             return data

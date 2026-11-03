@@ -25,14 +25,18 @@ import uuid
 
 from .conversations import ConversationBridge, BridgeError, _INSTRUCTIONS
 from .time_context import local_time_context
+from . import usage
 
 
 PROVIDERS = {
     "codex": {"label": "Codex", "account_label": "ChatGPT", "reasoning": True, "fast_mode": True, "auto_review": True, "steering": True},
     "cursor": {"label": "Cursor", "account_label": "Cursor", "reasoning": False, "fast_mode": False, "auto_review": False, "steering": False},
     "opencode": {"label": "OpenCode", "account_label": "OpenCode", "reasoning": False, "fast_mode": False, "auto_review": False, "steering": False},
-    "claude": {"label": "Claude Code", "account_label": "Claude", "reasoning": False, "fast_mode": False, "auto_review": False, "steering": False},
+    "claude": {"label": "Claude Code", "account_label": "Claude", "reasoning": True, "fast_mode": True, "auto_review": False, "steering": False},
 }
+
+# Accepted by `claude --effort`; the CLI applies each model's own limits.
+CLAUDE_EFFORTS = ("low", "medium", "high", "xhigh", "max")
 
 
 def provider_name(value):
@@ -178,6 +182,30 @@ class CliBridge(ConversationBridge):
         connection = self._connections.get(scope)
         return connection.proc if connection else None
 
+    def quota(self):
+        """Read native subscription metadata without a prompt or saved session.
+
+        Anthropic SDK 0.3.169+ exposes get_usage as experimental. Keep failures
+        optional and skip transcript scanning, hooks, MCP and project settings.
+        """
+        if self.backend != "claude":
+            raise BridgeError("This provider does not expose a native quota read.")
+        env = {key: value for key, value in os.environ.items()
+               if key != "CLAUDECODE" and not key.startswith("SUPERSURFER_AGENT_")}
+        with tempfile.TemporaryDirectory(prefix="usage-", dir=self.state_dir) as directory:
+            config_path = Path(directory) / "mcp.json"
+            config_path.write_text('{"mcpServers":{}}')
+            config_path.chmod(0o600)
+            connection = ProtocolProcess([executable("claude"), "--print", "--input-format", "stream-json",
+                "--output-format", "stream-json", "--verbose", "--no-session-persistence",
+                "--setting-sources=", "--strict-mcp-config", "--mcp-config", str(config_path)],
+                directory, env, lambda *_: None, claude=True)
+            try:
+                connection.call("initialize", {"hooks": None, "systemPromptSnapshot": False}, timeout=15)
+                return usage.claude_quota(connection.call("get_usage", {"skip_behaviors": True}, timeout=15))
+            finally:
+                connection.close()
+
     def _steerable(self, chat):
         return False  # No exact-turn steering contract has been verified for these CLIs.
 
@@ -287,7 +315,8 @@ class CliBridge(ConversationBridge):
                     ids.append(value)
             ids = list(dict.fromkeys(["auto", *ids]))
         return {"backend": self.backend, "models": [{"id": value, "model": value, "displayName": value.title() if self.backend == "claude" else value,
-            "isDefault": i == 0, "supportedReasoningEfforts": [], "defaultReasoningEffort": None} for i, value in enumerate(ids)]}
+            "isDefault": i == 0, "supportedReasoningEfforts": list(CLAUDE_EFFORTS) if self.backend == "claude" and value != "haiku" else [],
+            "defaultReasoningEffort": None} for i, value in enumerate(ids)]}
 
     def model_defaults(self, cwd=None):
         return {"model": "auto" if self.backend == "cursor" else "sonnet", "reasoning": None}
@@ -353,8 +382,11 @@ class CliBridge(ConversationBridge):
         done = threading.Event()
         outcome = {"status": "failed", "error": "Provider disconnected; this turn's outcome is unknown and it was not replayed."}
         try:
-            if approval_mode == "auto_review" or fast_mode or reasoning is not None:
+            capabilities = PROVIDERS[self.backend]
+            if approval_mode == "auto_review" or fast_mode and not capabilities["fast_mode"] or reasoning is not None and not capabilities["reasoning"]:
                 raise BridgeError("This backend supports Ask or YOLO permissions; Codex reasoning, Fast mode and automatic review are unavailable.", 400)
+            if self.backend == "claude" and reasoning is not None and reasoning not in CLAUDE_EFFORTS:
+                raise BridgeError("Choose a Claude Code effort: " + ", ".join(CLAUDE_EFFORTS) + ".", 400)
             self.require_chatgpt()
             clock = local_time_context(context.get("timezone"))
             instructions = context.get("base_instructions", _INSTRUCTIONS) + "\n\n" + context.get("instructions", "")
@@ -393,6 +425,11 @@ class CliBridge(ConversationBridge):
                     args.append("--resume=" + session_id)
                 if model:
                     args.append("--model=" + model)
+                if reasoning:
+                    args.append("--effort=" + reasoning)
+                # Fast mode is a Claude Code setting; --settings still applies
+                # when other setting sources are excluded above.
+                args.append("--settings=" + json.dumps({"fastMode": bool(fast_mode)}))
             elif self.backend == "opencode":
                 # Ask every native tool first; YOLO is handled by the scoped
                 # approval callback, not a shared server-wide permission change.
@@ -416,7 +453,7 @@ class CliBridge(ConversationBridge):
                 connection = ProtocolProcess(args, context["cwd"], env, receive, self.backend == "claude")
                 self._connections[scope] = connection
                 chat.update(turn_id=uuid.uuid4().hex, status="starting")
-                chat["agent"].update(backend=self.backend, model=model, reasoning=None, fast_mode=False,
+                chat["agent"].update(backend=self.backend, model=model, reasoning=reasoning if capabilities["reasoning"] else None, fast_mode=bool(fast_mode) and capabilities["fast_mode"],
                                      approval_mode=approval_mode, runtime_approval_mode=approval_mode,
                                      active_sandbox="provider-native" if approval_mode == "ask" else "danger-full-access", cwd=context["cwd"])
                 self._save(chat)
@@ -456,6 +493,8 @@ class CliBridge(ConversationBridge):
                 self._save(chat)
             if self.backend in {"cursor", "opencode"}:
                 result = connection.call("session/prompt", {"sessionId": session_id, "prompt": [{"type": "text", "text": message}]}, timeout=self.QUESTION_TIMEOUT + 120)
+                if self.backend == "opencode":
+                    self.observe_usage(session_id, context["cwd"])
                 if result.get("stopReason") == "cancelled":
                     outcome.update(status="interrupted", error=None)
                 elif result.get("stopReason") in {"end_turn", "max_tokens", "max_turn_requests", "refusal"}:
@@ -500,7 +539,9 @@ class CliBridge(ConversationBridge):
                         return
                     update = params.get("update", {})
                     kind = update.get("sessionUpdate")
-                    if kind == "agent_message_chunk" and update.get("content", {}).get("type") == "text":
+                    if kind == "usage_update":
+                        usage.acp_update(self, chat, update)
+                    elif kind == "agent_message_chunk" and update.get("content", {}).get("type") == "text":
                         key = update.get("messageId") or chat["turn_id"] + ":assistant:" + str(chat.get("cursor_message_seq", 0))
                         self._assistant_item(chat, key, update["content"]["text"], delta=True, turn_id=chat["turn_id"])
                         stream_only = True
@@ -562,6 +603,12 @@ class CliBridge(ConversationBridge):
                         else:
                             chat["thread_id"] = session
                             chat["agent"]["session_id"] = session
+                    # Claude can decline Fast mode for the account or model; report
+                    # its own reason instead of implying the turn runs fast.
+                    if chat["agent"].get("fast_mode") and value.get("fast_mode_state") not in (None, "on"):
+                        chat["agent"]["fast_mode"] = False
+                        reason = str(value.get("fast_mode_disabled_reason") or "not available").replace("_", " ")[:120]
+                        self._activity(chat, "permissions", "Claude Code turned Fast mode off for this turn: " + reason + ".")
                 elif kind == "stream_event" and not value.get("parent_tool_use_id"):
                     event = value.get("event", {})
                     if event.get("type") == "message_start":
@@ -578,6 +625,7 @@ class CliBridge(ConversationBridge):
                         if part.get("type") == "tool_use":
                             self._activity(chat, "mcpToolCall" if part.get("name", "").startswith("mcp__") else "commandExecution", part.get("name", "Tool action"), part.get("id"), "working")
                 elif kind == "result":
+                    usage.claude_result(self, chat, value)
                     failed = value.get("is_error") or value.get("subtype", "success") != "success"
                     outcome.update(status="failed" if failed else "completed", error="Claude did not complete the turn. Check its sign-in, usage limits and requested tool permissions." if failed else None)
                     if not failed and value.get("result") and not any(m["role"] == "assistant" and m.get("turn_id") == chat["turn_id"] for m in chat["messages"]):

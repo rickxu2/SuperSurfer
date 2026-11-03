@@ -6,6 +6,7 @@ from .codex import CodexBridge
 from .cli_backends import CliBridge, PROVIDERS, provider_name
 from .conversations import BridgeError
 from .opencode import OpenCodeBridge
+from . import usage
 
 
 class BackendRouter:
@@ -49,6 +50,13 @@ class BackendRouter:
 
     def account(self, backend="codex", refresh=False):
         backend = provider_name(backend)
+        # Keep the account identity and its quota observation together through
+        # app-owned login/logout. External CLI account changes remain CLI-owned.
+        with self.account_locks[backend]:
+            return self._account(backend, refresh)
+
+    def _account(self, backend, refresh):
+        backend = provider_name(backend)
         bridge = self.provider(backend)
         try:
             if backend == "codex" and not bridge.installed():
@@ -60,7 +68,26 @@ class BackendRouter:
             result = {"account": None, "installed": True, "login_required": True, "error": str(error)}
         with bridge._lock:
             busy = sum(bool(chat.get("busy")) for chat in bridge._chats.values())
-        return {**result, "backend": backend, "active_turns": busy, "capabilities": PROVIDERS[backend]}
+        quota = {"status": "unavailable", "windows": [], "observed_at": None, "source": None,
+                 "note": "Install Codex and sign in to read account quota." if backend == "codex" else
+                         "The supported CLI integration does not expose remaining account quota. Check the provider's usage dashboard."}
+        account_tokens = None
+        if backend == "codex" and not result.get("login_required") and not result.get("error"):
+            try:
+                quota = usage.quota(bridge._rpc("account/rateLimits/read", {}))
+            except BridgeError:
+                quota["note"] = "Account quota could not be read. Refresh to retry; check the account dashboard or CLI version."
+            try:
+                account_tokens = usage.account_tokens(bridge._rpc("account/usage/read", {}))
+            except BridgeError:
+                pass  # Older app servers do not expose account token summaries.
+        if backend == "claude" and not result.get("login_required") and not result.get("error"):
+            try:
+                quota = bridge.quota()
+            except (BridgeError, OSError):
+                quota["note"] = "Claude plan quota could not be read. Refresh to retry; this experimental control requires a recent CLI and eligible subscription."
+        return {**result, "backend": backend, "active_turns": busy, "capabilities": PROVIDERS[backend],
+                "usage": {"quota": quota, "account_tokens": account_tokens, "consumption": usage.consumption(bridge)}}
 
     def _require_account_idle(self, backend):
         bridge = self.provider(backend)

@@ -514,6 +514,7 @@ class Service(SurfboardService, EditorService, WritingService):
                            "created_at": chat.get("created_at") or entry.get("created_at"),
                            "updated_at": chat.get("updated_at") or entry.get("updated_at"), "error": chat.get("error"),
                            "queue_capable": True})
+            agents[-1]["backend"] = self.backend_for(entry["scope"])
         for agent in native:
             retired = self.native_retired(agent["id"])
             busy = not retired and agent.get("status") in {"busy", "interactive"}
@@ -569,10 +570,12 @@ class Service(SurfboardService, EditorService, WritingService):
             raise APIError("Agent belongs to another experiment", 403)
         return scope
 
-    def create_experiment_agent(self, experiment_id, name=None):
+    def create_experiment_agent(self, experiment_id, name=None, backend=None, request_id=None, project_id=None):
         experiment = self.store.experiment(experiment_id)
+        if project_id is not None and experiment["project_id"] != project_id:
+            raise APIError("Task belongs to another project", 403)
         self.lookup("projects", experiment["project_id"])
-        entry = self.store.create_conversation(experiment_id, name)
+        entry = self.store.create_conversation(experiment_id, name, backend=backend, request_id=request_id)
         return {**self.experiment_agents(experiment_id), "scope": entry["scope"]}
 
     def time_prefix(self, text):
@@ -1484,7 +1487,8 @@ class Service(SurfboardService, EditorService, WritingService):
                 raise APIError(f"Model {chosen!r} does not support reasoning {effort!r}. Supported values: {', '.join(supported) or 'none advertised'}.")
             effort = entry.get("defaultReasoningEffort")
             if effort not in supported:
-                effort = supported[0] if supported else None
+                # Codex requires an advertised effort; other CLIs keep their own default.
+                effort = supported[0] if supported and backend == "codex" else None
             if reasoning is not None:
                 note = f"The role's {reasoning} reasoning is unavailable for this model; the next turn uses {effort or 'the model default'} instead."
         return {"model": entry.get("model") or entry["id"], "reasoning": effort}, supported, note
@@ -1543,7 +1547,7 @@ class Service(SurfboardService, EditorService, WritingService):
                        "editable": not self.read_only, "available": False, "owner": "SuperSurfer", "supported_reasoning": [], "note": None, "error": None}
         try:
             resolved, supported, note = self._model_choice(effective["model"], effective["reasoning"], overrides["reasoning"] is not None, information["cwd"], refresh, backend=backend)
-            if backend != "codex" and (effective["fast_mode"] or effective["approval_mode"] == "auto_review"):
+            if effective["fast_mode"] and not capabilities["fast_mode"] or backend != "codex" and effective["approval_mode"] == "auto_review":
                 raise APIError("Fast mode and Codex automatic approval review are unavailable for this backend. Choose Ask or YOLO.")
             resolved["fast_mode"] = effective["fast_mode"]
             resolved["approval_mode"] = effective["approval_mode"]
@@ -1758,12 +1762,13 @@ class Service(SurfboardService, EditorService, WritingService):
             arguments = {key: value for key, value in params.items() if key not in {"request_id", "experiment_id", "project_id"}}
             return self.queue_agent_run("manual:" + request_id, arguments, experiment)
         if op in {"experiment.agent.create", "experiment.agent.select", "experiment.agent.resume"}:
-            allowed = {"experiment_id", "name"} if op.endswith("create") else {"experiment_id", "scope"}
+            allowed = {"experiment_id", "name", "backend", "request_id", "project_id"} if op.endswith("create") else {"experiment_id", "scope"}
             if set(params) - allowed:
                 raise APIError("Unexpected experiment agent fields")
             experiment_id = text_field(params, "experiment_id", 180)
             if op.endswith("create"):
-                return self.create_experiment_agent(experiment_id, params.get("name"))
+                return self.create_experiment_agent(experiment_id, params.get("name"), backend=params.get("backend"),
+                                                    request_id=params.get("request_id"), project_id=params.get("project_id"))
             scope = text_field(params, "scope", 256)
             experiment = self.store.experiment(experiment_id)
             self.validate_experiment_scope(experiment, scope)

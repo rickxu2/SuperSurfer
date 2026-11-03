@@ -576,6 +576,12 @@ class CodexBridge(ConversationBridge):
                 # account() always performs a fresh, credential-free account/read.
                 return
             chat = self._by_thread(params.get("threadId"))
+            if method == "thread/tokenUsage/updated":
+                if chat is not None:
+                    from . import usage
+                    total = (params.get("tokenUsage") or {}).get("total") or {}
+                    usage.record(self, "tokens", chat["thread_id"], total.get("totalTokens"), "Codex thread/tokenUsage/updated (thread total)")
+                return
             if chat is None or not chat["busy"] or chat["status"] == "starting":
                 return
             turn_id = params.get("turnId") or (params.get("turn") or {}).get("id")

@@ -16,7 +16,7 @@ from server import engine
 class EngineTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name)
+        self.root = Path(self.tmp.name).resolve()
         self.home = self.root / 'runtime'
         self.home.mkdir()
         self.bundle = self.root / 'release' / 'engine'

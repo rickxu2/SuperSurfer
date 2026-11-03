@@ -89,11 +89,23 @@ class ProviderServiceTests(unittest.TestCase):
             self.assertIsNone(self.service.codex.provider('codex')._proc)
     def test_unsupported_controls_cannot_be_written_and_workspace_defaults_fall_back_safely(self):
         self.select()
-        for fields in ({'fast_mode':True},{'reasoning':'high'},{'approval_mode':'auto_review'}):
+        for fields in ({'reasoning':'ultra'},{'approval_mode':'auto_review'},{'model':'haiku','reasoning':'high'}):
             with self.assertRaises(ValueError):self.service.action('chat.settings',{'scope':self.scope,**fields})
         self.service.store.save_settings({'approval_mode':'auto_review'})
         self.assertEqual('ask',self.service.board_defaults(self.scope)['approval_mode'])
         self.assertEqual('ask',self.service.chat_preferences(self.scope)['effective']['approval_mode'])
+    def test_claude_effort_and_fast_mode_reach_the_cli(self):
+        preferences=self.select()['preferences'];self.assertTrue(preferences['capabilities']['reasoning']);self.assertTrue(preferences['capabilities']['fast_mode'])
+        self.assertIsNone(preferences['effective']['reasoning']);self.assertIn('xhigh',preferences['supported_reasoning'])
+        preferences=self.service.action('chat.settings',{'scope':self.scope,'model':'opus','reasoning':'xhigh','fast_mode':True})['preferences']
+        self.assertEqual(('xhigh',True),(preferences['effective']['reasoning'],preferences['effective']['fast_mode']))
+        self.service.action('chat.send',{'scope':self.scope,'text':'hello'});self.cli.wait(lambda:not self.service.codex.chat(self.scope)['busy'])
+        args=next(row['args'] for row in self.cli.records() if 'mcp' in row)
+        self.assertIn('--effort=xhigh',args);self.assertIn('--settings='+json.dumps({'fastMode':True}),args);self.assertIn('--model=opus',args)
+        agent=self.service.codex.chat(self.scope)['agent'];self.assertEqual(('xhigh',True),(agent['reasoning'],agent['fast_mode']))
+        self.service.action('chat.send',{'scope':self.scope,'text':'fast-off'});self.cli.wait(lambda:not self.service.codex.chat(self.scope)['busy'])
+        chat=self.service.codex.chat(self.scope);self.assertFalse(chat['agent']['fast_mode'])
+        self.assertTrue(any('Fast mode off for this turn: extra usage disabled' in item['text'] for item in chat['activity']))
     def test_mcp_question_on_claude_uses_same_scoped_service_and_waits_for_real_answer(self):
         self.select();server=create_server(self.service,port=0);thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start();helper=None
         try:

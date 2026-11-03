@@ -358,7 +358,7 @@ function renderAgentChooser(){
  const container=$('#chat-agent-list');if(!container||!state.data)return;
  const directory=currentAgentDirectory(),agents=scopedAgents(),current=agents.filter(agent=>!agent.retired&&!agent.archived),previous=agents.filter(agent=>agent.retired&&!agent.archived),archived=agents.filter(agent=>agent.archived),creating=agentMutations.has('create:'+state.experimentId);
  const rows=items=>items.map(agent=>`<button class="agent-list-row ${state.scope===agent.scope?'selected':''}" data-conversation="${e(agent.scope)}" title="${e(agent.name)} · ${e(agentLabel(agent))}" aria-current="${state.scope===agent.scope?'true':'false'}"><span class="status-dot ${e(agent.retired?'unknown':agent.busy?'running':agent.status||'idle')}"></span><span class="agent-list-copy"><strong>${e(agent.name||'Agent')}</strong><small>${e(agentLabel(agent))}${agent.owner==='AutoML'?' · AutoML':''}${!state.experimentId&&agent.experiment_id?' · '+e(state.data.experiments.find(x=>x.id===agent.experiment_id)?.name||'Experiment'):''}</small></span>${icon('message')}</button>`).join('');
- const html=`<div class="agents-list-heading"><button type="button" class="agents-expand-button" data-action="toggle-agent-list" aria-expanded="${agentsExpanded}" aria-label="${agentsExpanded?'Collapse':'Expand'} agents section">${icon(agentsExpanded?'chevronDown':'chevron')}<span>Agents · ${current.length}</span></button><button type="button" class="icon-button" data-action="toggle-right-sidebar" aria-label="Hide right sidebar" title="Hide right sidebar">${icon('panel')}</button>${state.experimentId?`<button id="chat-new-agent" type="button" class="new-agent-button" data-action="new-experiment-agent" aria-label="New experiment agent" title="New agent" ${creating?'disabled':''}${disabled()}>${creating?'<span class="spinner"></span>':icon('plus')}<span>New agent</span></button>`:''}</div><div class="agent-list" ${agentsExpanded?'':'hidden'}>${rows(current)}${previous.length?`<div class="previous-agents-label">Previous agents</div>${rows(previous)}`:''}${archived.length?`<button type="button" class="archived-agents-toggle" data-action="toggle-archived-agents" aria-expanded="${showArchivedAgents}">${icon(showArchivedAgents?'chevronDown':'chevron')}Archived · ${archived.length}</button>${showArchivedAgents?rows(archived):''}`:''}</div>${directory?.error?`<div class="agent-list-error">${e(directory.error)} <button type="button" data-action="refresh-agents">Retry</button></div>`:directoryKey()&&!directory&&!isSurfboard()?'<div class="agent-list-loading">Loading conversations…</div>':''}`;
+ const html=`<div class="agents-list-heading"><button type="button" class="agents-expand-button" data-action="toggle-agent-list" aria-expanded="${agentsExpanded}" aria-label="${agentsExpanded?'Collapse':'Expand'} agents section">${icon(agentsExpanded?'chevronDown':'chevron')}<span>Agents · ${current.length}</span></button><button type="button" class="icon-button" data-action="toggle-right-sidebar" aria-label="Hide right sidebar" title="Hide right sidebar">${icon('panel')}</button>${state.view==='workspace'&&state.projectId&&!isSurfboard()?`<button id="chat-new-agent" type="button" class="new-agent-button" data-action="new-experiment-agent" aria-label="New experiment agent" title="New agent" ${creating?'disabled':''}${disabled()}>${creating?'<span class="spinner"></span>':icon('plus')}<span>New agent</span></button>`:''}</div><div class="agent-list" ${agentsExpanded?'':'hidden'}>${rows(current)}${previous.length?`<div class="previous-agents-label">Previous agents</div>${rows(previous)}`:''}${archived.length?`<button type="button" class="archived-agents-toggle" data-action="toggle-archived-agents" aria-expanded="${showArchivedAgents}">${icon(showArchivedAgents?'chevronDown':'chevron')}Archived · ${archived.length}</button>${showArchivedAgents?rows(archived):''}`:''}</div>${directory?.error?`<div class="agent-list-error">${e(directory.error)} <button type="button" data-action="refresh-agents">Retry</button></div>`:directoryKey()&&!directory&&!isSurfboard()?'<div class="agent-list-loading">Loading conversations…</div>':''}`;
  if(container.dataset.signature===html)return;
  const scroll=container.querySelector('.agent-list')?.scrollTop||0,focused=container.contains(document.activeElement)?document.activeElement:null,focusedScope=focused?.dataset.conversation,focusedAction=focused?.dataset.action;
  container.dataset.signature=html;container.innerHTML=html;container.setAttribute('aria-label',`${state.experimentId?'Experiment':state.projectId&&state.view==='workspace'?'Project':'Workspace'} agents`);
@@ -391,12 +391,25 @@ async function selectConversation(scope,{persist=true}={}){
   catch(error){toast('Conversation opened, but its selection could not be saved: '+error.message,true);}
  }
 }
-async function createExperimentAgent(){
- const id=state.experimentId,key='experiment:'+id,busyKey='create:'+id;if(!id||readOnly()||agentMutations.has(busyKey))return;
+function showCreateAgent(){
+ if(!state.projectId||readOnly())return;
+ const projectId=state.projectId,items=state.data.experiments.filter(item=>item.project_id===projectId&&!item.archived);
+ if(!items.length){toast('Create a work item in this project before adding an agent.',true);return;}
+ openModal('New agent',`<form id="create-agent-form"><p>Create an idle SuperSurfer worker in this project. Send a message afterward to start work.</p><label class="field"><span>Work item</span><select class="control" name="experiment_id" required>${items.map(item=>`<option value="${e(item.id)}" ${item.id===state.experimentId?'selected':''}>${e(item.name)}</option>`).join('')}</select></label><label class="field"><span>Agent name</span><input class="control" name="name" maxlength="160" required placeholder="e.g. UI developer"></label><label class="field"><span>Provider</span><select class="control" name="backend">${Object.entries(backendLabels).map(([id,label])=>`<option value="${id}" ${id===(state.data.settings.backends?.worker||'codex')?'selected':''}>${label}</option>`).join('')}</select></label><p class="small muted">Uses this work item's permissions and tools. Provider sign-in and model selection can be completed in chat. No message, run or recurring work is started.</p><p id="create-agent-error" role="alert" hidden></p><div class="modal-footer"><button type="button" class="button" data-action="close-modal">Cancel</button><button class="button primary" type="submit">Create agent</button></div></form>`,'create-agent');
+ const form=$('#create-agent-form');let request=null;
+ form.addEventListener('submit',async event=>{event.preventDefault();const button=form.querySelector('[type=submit]');if(button.disabled)return;
+  const fields={...Object.fromEntries(new FormData(form)),project_id:projectId};if(request&&JSON.stringify(request.fields)!==JSON.stringify(fields))request=null;
+  request??={fields,request_id:runRequestId()};button.disabled=true;form.querySelectorAll('input,select').forEach(control=>control.disabled=true);
+  try{await createExperimentAgent({...fields,request_id:request.request_id});if(state.modalKind==='create-agent'&&form.isConnected)closeModal();}
+  catch(error){const output=form.querySelector('[role=alert]');output.hidden=false;output.textContent=error.message+' Retry with the same details to recover this request.';}
+  finally{button.disabled=false;form.querySelectorAll('input,select').forEach(control=>control.disabled=false);}
+ });
+}
+async function createExperimentAgent(params){
+ const id=params.experiment_id,key='experiment:'+id,busyKey='create:'+id;if(!id||readOnly()||agentMutations.has(busyKey))throw new Error('Agent creation is unavailable or already in progress.');
  const selectionRevision=scopeSelectionRevision;agentMutations.add(busyKey);state.sidebarSignature='';syncNavigation();updateChatHeader();
  const version=(agentDirectoryVersions.get(key)||0)+1;agentDirectoryVersions.set(key,version);
- try{const result=await action('experiment.agent.create',{experiment_id:id});if(version===agentDirectoryVersions.get(key))agentDirectories.set(key,result);if(state.experimentId===id&&selectionRevision===scopeSelectionRevision)await selectConversation(result.scope,{persist:false});toast('New agent ready. Send a message to begin.');}
- catch(error){toast(error.message,true);}
+ try{const result=await action('experiment.agent.create',params);if(version===agentDirectoryVersions.get(key))agentDirectories.set(key,result);if(state.projectId===params.project_id&&selectionRevision===scopeSelectionRevision){if(state.experimentId!==id)await navigate({projectId:params.project_id,experimentId:id,tab:'overview'});await selectConversation(result.scope,{persist:false});}toast('New agent ready. Send a message to begin.');}
  finally{agentMutations.delete(busyKey);state.sidebarSignature='';syncNavigation();updateChatHeader();}
 }
 async function resumeExperimentAgent(){
@@ -1179,7 +1192,7 @@ function updateChatHeader(){
 function reasoningValues(model) {
   return [...new Set((model?.supportedReasoningEfforts || model?.supported_reasoning || []).map(item => typeof item === 'string' ? item : item.reasoningEffort || item.reasoning_effort).filter(Boolean))];
 }
-function effortLabel(value) { return value ? String(value).charAt(0).toUpperCase() + String(value).slice(1) : currentBackend()==='codex'?'Codex default':'Not available'; }
+function effortLabel(value) { return value ? String(value).charAt(0).toUpperCase() + String(value).slice(1) : state.chat?.preferences?.capabilities?.reasoning===false?'Not available':currentBackend()==='codex'?'Codex default':'Default'; }
 function renderChatPreferences() {
   const container=$('#chat-preferences'),notices=$('#chat-preference-notices');if(!container||!notices)return;
   const preferences=state.chat?.preferences;
@@ -1598,7 +1611,7 @@ async function handleAction(name,el){switch(name){
  case 'close-modal':closeModal();break;
  case 'add-project':showAddProject();break;
  case 'add-experiment':await showAddExperiment();break;
- case 'new-experiment-agent':await createExperimentAgent();break;
+ case 'new-experiment-agent':showCreateAgent();break;
  case 'resume-experiment-agent':await resumeExperimentAgent();break;
  case 'refresh-agents':await loadAgentDirectory();break;
  case 'add-host':showAddHost();break;
@@ -1706,6 +1719,11 @@ function startChatPolling(){if(chatPollingStarted)return;chatPollingStarted=true
 async function chatPoll(){await refreshChat();setTimeout(chatPoll,state.chat?.busy?800:3000);}
 const accountGate=createAccountGate({api,action,readOnly,getBackend:currentBackend,getSetupRequired:()=>state.data?.account_setup?.required===true,onChoose:async result=>{state.data.settings=result.settings;state.data.account_setup=result.setup;await refreshState(true);await refreshChat(true);await fetchModelCatalog(true);},onAccount:account=>{state.accounts||={};state.accounts[account.backend||'codex']=account;state.account=account;workspaceAccounts.observe(account);if(state.data)updateChatHeader();}});
 const workspaceAccounts=createWorkspaceAccounts({api,action,gate:accountGate,readOnly,onError:message=>toast(message,true)});
+workspaceAccounts.mountSidebar($('#sidebar-quota'));
+$('#sidebar-quota')?.addEventListener('quota-details',()=>navigate({view:'settings'}));
+// UI-only observation while this window is visible; no agent wakeup or inference.
+setInterval(()=>{if(!document.hidden)void workspaceAccounts.refresh();},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){workspaceAccounts.repaint();void workspaceAccounts.refresh();}});
 await readNavigation();
 await refreshState(true);
 if(panelWindows.detached&&panelWindows.path)await openPageCode({path:panelWindows.path}).catch(error=>toast(error.message,true));

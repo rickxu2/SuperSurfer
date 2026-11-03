@@ -30,6 +30,14 @@ published 0.1.43 release.
 - **Bring your agents.** Work with **Codex, Cursor, Claude Code or OpenCode** through
   persistent project leads and task workers. Give each a role, share context,
   ask questions and follow their progress across projects.
+  In source builds, **New agent** lets you name an idle worker, choose its provider
+  and attach it to a work item; send a message to begin. **Settings → Coding
+  backends → Usage & remaining quota** shows supported quota windows and observed
+  token/cost consumption with sources and timestamps. Missing provider data is
+  marked unavailable; consumption covers this host's observed SuperSurfer sessions,
+  not the complete account bill. Rebuild the workspace service to use these changes.
+  Linked providers also show compact quota bars below Settings in the sidebar;
+  darker/lighter fills and paired percentages represent the two quota windows.
 - **Keep your editor.** Use the optional **VS Code backend with Open VSX
   extensions**, themes and keybindings, or the lightweight built-in editor.
   Send selected code straight to chat, inspect Git diffs and review agent edits

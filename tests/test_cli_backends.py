@@ -68,7 +68,7 @@ for line in sys.stdin:
  else:
   if v.get('type')=='control_request':emit({'type':'control_response','response':{'subtype':'success','request_id':v['request_id'],'response':{}}})
   elif v.get('type')=='user':
-   text=v['message']['content'];emit({'type':'system','subtype':'init','session_id':session})
+   text=v['message']['content'];emit({'type':'system','subtype':'init','session_id':session,**({'fast_mode_state':'off','fast_mode_disabled_reason':'extra_usage_disabled'} if text=='fast-off' else {})})
    if text=='crash':os._exit(2)
    if text=='approval':emit({'type':'control_request','request_id':'permission-1','request':{'subtype':'can_use_tool','tool_name':'Bash','input':{'command':'touch result.txt','api_key':'NEVER_PERSIST_TOOL_SECRET'}}});continue
    if text in ('question','cancel-question','multi-question','malformed-question'):

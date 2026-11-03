@@ -1,3 +1,21 @@
+# Provider usage and manual agents (source build)
+
+- [x] Compact linked-only quota bars directly below sidebar Settings, with two
+  opacity levels, paired percentages, accessible window/reset details, shared
+  refresh and explicit unknown/stale states.
+
+- [x] Provider usage UI with quota provenance, observed token/cost consumption,
+  explicit unavailable values and persistent replay-safe observations.
+- [x] Named manual task worker creation with provider selection, idle initial
+  state, stable retry receipts and service-side scope/read-only enforcement.
+- [x] Completion audit: add Codex account lifetime tokens, Claude experimental
+  plan-quota control, and OpenCode sanitized owned-session token/cost export.
+- [ ] Deferred by the user after completion audit: Cursor metrics, OpenCode
+  account quota, and Codex dollar costs. These are not implemented claims:
+  Cursor needs eligible account API access, OpenCode quota depends on its upstream
+  provider/plan, and Codex account reads do not supply USD charges. Native-owner
+  usage is also not exposed.
+
 - [x] Add OpenCode ACP as a selectable backend, including local configured models,
   scoped tools, approvals, durable sessions and UI capability handling.
 
