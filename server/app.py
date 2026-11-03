@@ -183,7 +183,7 @@ class Service(SurfboardService, EditorService, WritingService):
         self.action_lock = threading.RLock()
         self.project_limits = ProjectLimits(self)
         self.model_lock = threading.RLock()
-        self.provider_model_locks = {name: threading.RLock() for name in ("cursor", "claude", "opencode")}
+        self.provider_model_locks = {name: threading.RLock() for name in ("cursor", "claude", "opencode", "antigravity")}
         self._models_cache = None
         self._models_checked_at = 0
         self._models_error = None
@@ -1420,6 +1420,10 @@ class Service(SurfboardService, EditorService, WritingService):
         if backend != "codex":
             from .cli_backends import provider_name
             provider_name(backend)
+            if backend == "antigravity":
+                # Native OAuth fills this in-memory catalog asynchronously;
+                # never cache the pre-login default for another minute.
+                return self.codex.models(backend=backend)
             key = "catalog:" + backend
             with self.provider_model_locks[backend]:
                 cached = self._model_defaults_cache.get(key)

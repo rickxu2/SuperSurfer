@@ -6,6 +6,7 @@ from .codex import CodexBridge
 from .cli_backends import CliBridge, PROVIDERS, provider_name
 from .conversations import BridgeError
 from .opencode import OpenCodeBridge
+from .antigravity import AntigravityBridge
 from . import usage
 
 
@@ -31,7 +32,8 @@ class BackendRouter:
         backend = provider_name(backend)
         with self.lock:
             if backend not in self.bridges:
-                self.bridges[backend] = (OpenCodeBridge if backend == "opencode" else CliBridge)(backend, self.directory / backend, self.context_provider, self.action_handler)
+                adapter = {"opencode": OpenCodeBridge, "antigravity": AntigravityBridge}.get(backend, CliBridge)
+                self.bridges[backend] = adapter(backend, self.directory / backend, self.context_provider, self.action_handler)
             return self.bridges[backend]
 
     def backend_for(self, scope):

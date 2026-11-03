@@ -92,8 +92,8 @@ class Store:
                     raise ValueError(f"Invalid {field} value")
                 if field == "reasoning" and not re.fullmatch(r"[A-Za-z0-9_.-]+", setting):
                     raise ValueError("Reasoning effort must be a nonempty value from the model catalog")
-                if field == "backends" and setting not in {"codex", "cursor", "claude", "opencode"}:
-                    raise ValueError("Choose codex, cursor, claude or opencode.")
+                if field == "backends" and setting not in {"codex", "cursor", "claude", "opencode", "antigravity"}:
+                    raise ValueError("Choose codex, cursor, claude, opencode or antigravity.")
                 settings[field][role] = setting
         if "monitor_enabled" in params:
             if not isinstance(params["monitor_enabled"], bool):
@@ -125,8 +125,8 @@ class Store:
         with self.lock:
             settings = self.chat_settings(scope)
             for key, value in changes.items():
-                if key == "backend" and value not in {None, "codex", "cursor", "claude", "opencode"}:
-                    raise ValueError("Choose codex, cursor, claude, opencode or null to inherit.")
+                if key == "backend" and value not in {None, "codex", "cursor", "claude", "opencode", "antigravity"}:
+                    raise ValueError("Choose codex, cursor, claude, opencode, antigravity or null to inherit.")
                 if key == "approval_mode":
                     if value not in (None, "ask", "auto_review", "yolo"):
                         raise ValueError("approval_mode must be ask, auto_review, yolo or null to inherit")
@@ -160,8 +160,8 @@ class Store:
             return json.loads(row[0])
 
     def create_conversation(self, experiment_id, name=None, backend=None, request_id=None):
-        if backend is not None and (not isinstance(backend, str) or backend not in {"codex", "cursor", "claude", "opencode"}):
-            raise ValueError("Choose codex, cursor, claude or opencode")
+        if backend is not None and (not isinstance(backend, str) or backend not in {"codex", "cursor", "claude", "opencode", "antigravity"}):
+            raise ValueError("Choose codex, cursor, claude, opencode or antigravity")
         if request_id is not None and (not isinstance(request_id, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{16,100}", request_id)):
             raise ValueError("request_id must be a stable random identifier")
         with self.lock, self.db:

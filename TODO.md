@@ -1,3 +1,14 @@
+# Google Antigravity (source build)
+
+- [x] Official ACP provider, Google personal-account connection, advertised model
+  selection, durable scoped sessions and capability-aware account/composer controls.
+- [x] Offline wire regressions for OAuth gating, permissions, resume, stop and
+  uncertain disconnects; native no-inference handshake checked in an empty profile.
+- [ ] Authenticated Google Free/Pro/Ultra inference and remote-host browser login
+  require a user-authenticated native runtime; not claimed by offline fixtures.
+- [ ] Native remaining-quota reads, shared credential logout and separate effort
+  picker are not implemented; supported ACP cost events can be observed.
+
 # Provider usage and manual agents (source build)
 
 - [x] Compact linked-only quota bars directly below sidebar Settings, with two

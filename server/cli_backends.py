@@ -1,6 +1,6 @@
 """Official provider CLIs; credentials and login flows remain CLI-owned.
 
-Cursor and OpenCode use ACP v1. Claude uses the CLI's bidirectional stream protocol, as
+Cursor, OpenCode and Google Antigravity use ACP v1. Claude uses the CLI's bidirectional stream protocol, as
 specified by Anthropic's published claude-agent-sdk-python transport/query.
 Each scope has a separate process and scoped MCP connection. Nothing is replayed
 after an uncertain disconnect. Raw CLI output and authentication output are never
@@ -32,6 +32,7 @@ PROVIDERS = {
     "codex": {"label": "Codex", "account_label": "ChatGPT", "reasoning": True, "fast_mode": True, "auto_review": True, "steering": True},
     "cursor": {"label": "Cursor", "account_label": "Cursor", "reasoning": False, "fast_mode": False, "auto_review": False, "steering": False},
     "opencode": {"label": "OpenCode", "account_label": "OpenCode", "reasoning": False, "fast_mode": False, "auto_review": False, "steering": False},
+    "antigravity": {"label": "Google Antigravity", "account_label": "Google", "reasoning": False, "fast_mode": False, "auto_review": False, "steering": False},
     "claude": {"label": "Claude Code", "account_label": "Claude", "reasoning": True, "fast_mode": True, "auto_review": False, "steering": False},
 }
 
@@ -41,13 +42,14 @@ CLAUDE_EFFORTS = ("low", "medium", "high", "xhigh", "max")
 
 def provider_name(value):
     if value not in PROVIDERS:
-        raise ValueError("Choose codex, cursor, claude or opencode.")
+        raise ValueError("Choose codex, cursor, claude, opencode or antigravity.")
     return value
 
 
 def executable(backend):
     override = os.environ.get("SUPERSURFER_" + backend.upper())
-    names = ("agent", "cursor-agent") if backend == "cursor" else (backend,)
+    names = (("agent", "cursor-agent") if backend == "cursor" else
+             ("agy_acp_server.par", "agy_acp_server.exe") if backend == "antigravity" else (backend,))
     candidates = [override] if override else [shutil.which(name) or str(Path.home() / ".local/bin" / name) for name in names]
     for path in candidates:
         if path and Path(path).is_file() and os.access(path, os.X_OK):
@@ -435,6 +437,8 @@ class CliBridge(ConversationBridge):
                 # approval callback, not a shared server-wide permission change.
                 env["OPENCODE_CONFIG_CONTENT"] = self.runtime_config(env, context["cwd"])
                 args = [binary, "acp"]
+            elif self.backend == "antigravity":
+                args, env = self.runtime_command(binary, env)
             else:
                 args = [binary, "--sandbox", "disabled" if approval_mode == "yolo" else "enabled"]
                 if model:
@@ -457,11 +461,13 @@ class CliBridge(ConversationBridge):
                                      approval_mode=approval_mode, runtime_approval_mode=approval_mode,
                                      active_sandbox="provider-native" if approval_mode == "ask" else "danger-full-access", cwd=context["cwd"])
                 self._save(chat)
-            if self.backend in {"cursor", "opencode"}:
+            if self.backend in {"cursor", "opencode", "antigravity"}:
                 try:
                     init = connection.call("initialize", {"protocolVersion": 1, "clientCapabilities": {"fs": {"readTextFile": False, "writeTextFile": False}, "terminal": False}, "clientInfo": {"name": "supersurfer", "version": "1"}})
                     if self.backend == "cursor" and any(method.get("id") == "cursor_login" for method in init.get("authMethods", []) if isinstance(method, dict)):
                         connection.call("authenticate", {"methodId": "cursor_login"})
+                    if self.backend == "antigravity":
+                        self.authenticate(connection, init)
                 except BridgeError as exc:
                     raise BridgeError(PROVIDERS[self.backend]["label"] + " could not connect using ACP. Update its CLI and check its configuration, then retry. " + str(exc)) from exc
                 servers = [{"name": name, "command": config["command"], "args": config.get("args", []), "env": [{"name": k, "value": v} for k, v in config.get("env", {}).items()]} for name, config in mcp.items()]
@@ -469,7 +475,12 @@ class CliBridge(ConversationBridge):
                     raise BridgeError("This provider cannot resume the saved session. Update its CLI; no new session or message was created.")
                 with self._lock:
                     chat["loading_history"] = bool(session_id)
-                result = connection.call("session/load" if session_id else "session/new", {"cwd": context["cwd"], "mcpServers": servers, **({"sessionId": session_id} if session_id else {})})
+                session_params = {"cwd": context["cwd"], "mcpServers": servers, **({"sessionId": session_id} if session_id else {})}
+                if self.backend == "antigravity":
+                    session_params["_meta"] = {"antigravity": {"eagerMcpServers": True}, "agy": {"disabledTools": ["ask_question"]}}
+                result = connection.call("session/load" if session_id else "session/new", session_params)
+                if self.backend == "antigravity" and session_id and result.get("sessionId", session_id) != session_id:
+                    raise BridgeError("Antigravity returned a different saved session. No prompt was sent or replayed.")
                 session_id = session_id or result.get("sessionId")
                 if not isinstance(session_id, str) or not session_id or len(session_id) > 256:
                     raise BridgeError("The provider returned an invalid session ID; the message was not sent.")
@@ -477,7 +488,7 @@ class CliBridge(ConversationBridge):
                     chat.update(thread_id=session_id, loading_history=False, status="working")
                     chat["agent"]["session_id"] = session_id
                     self._save(chat)
-                if self.backend == "opencode":
+                if self.backend in {"opencode", "antigravity"}:
                     self.configure_session(connection, session_id, result, model)
                 message = instructions + "\n\nUser request:\n" + text
             else:
@@ -491,7 +502,7 @@ class CliBridge(ConversationBridge):
                 next(m for m in chat["messages"] if m["id"] == message_id)["status"] = "sent"
                 chat["status"] = "working"
                 self._save(chat)
-            if self.backend in {"cursor", "opencode"}:
+            if self.backend in {"cursor", "opencode", "antigravity"}:
                 result = connection.call("session/prompt", {"sessionId": session_id, "prompt": [{"type": "text", "text": message}]}, timeout=self.QUESTION_TIMEOUT + 120)
                 if self.backend == "opencode":
                     self.observe_usage(session_id, context["cwd"])
@@ -532,7 +543,7 @@ class CliBridge(ConversationBridge):
             if not chat["busy"] or chat.get("cancel_requested"):
                 return
             stream_only = False
-            if self.backend in {"cursor", "opencode"}:
+            if self.backend in {"cursor", "opencode", "antigravity"}:
                 method, params = value.get("method"), value.get("params", {})
                 if method == "session/update":
                     if chat.get("loading_history") or params.get("sessionId") != chat.get("thread_id"):

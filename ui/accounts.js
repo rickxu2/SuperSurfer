@@ -1,7 +1,7 @@
 import {linkedAccount,paintSidebarQuota} from './sidebar-quota.js';
-const providers={codex:'ChatGPT / Codex',cursor:'Cursor',claude:'Claude Code',opencode:'OpenCode'};
-const installUrls={codex:'https://developers.openai.com/codex/cli/',cursor:'https://cursor.com/docs/cli/installation',claude:'https://code.claude.com/docs/en/setup',opencode:'https://opencode.ai/docs'};
-const usageUrls={codex:'https://chatgpt.com/codex/settings/usage',cursor:'https://cursor.com/dashboard',claude:'https://claude.ai/settings/usage',opencode:'https://opencode.ai/docs/providers/'};
+const providers={codex:'ChatGPT / Codex',cursor:'Cursor',claude:'Claude Code',opencode:'OpenCode',antigravity:'Google Antigravity'};
+const installUrls={codex:'https://developers.openai.com/codex/cli/',cursor:'https://cursor.com/docs/cli/installation',claude:'https://code.claude.com/docs/en/setup',opencode:'https://opencode.ai/docs',antigravity:'https://antigravity.google/docs/ide/extensions'};
+const usageUrls={codex:'https://chatgpt.com/codex/settings/usage',cursor:'https://cursor.com/dashboard',claude:'https://claude.ai/settings/usage',opencode:'https://opencode.ai/docs/providers/',antigravity:'https://antigravity.google/docs/plans'};
 const observed=at=>at?new Date(at*1000).toLocaleString():'No observation yet';
 function paintUsage(element,value){
  element.replaceChildren();

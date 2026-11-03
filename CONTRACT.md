@@ -1,3 +1,38 @@
+# Google Antigravity backend
+
+The `antigravity` provider launches Google's official `agy_acp_server.par` /
+`agy_acp_server.exe`, never a third-party CLI wrapper. The matching helper is
+resolved alongside the executable or through `ANTIGRAVITY_HARNESS_PATH`; Linux
+uses the registry's `--uid=` argument. `SUPERSURFER_ANTIGRAVITY` overrides its path.
+Role defaults, manual agent creation, first-machine account selection and new
+conversation preferences accept this backend. Existing conversations retain
+provider/session ownership across restarts.
+
+Only explicit `account.login` starts personal Google OAuth through native ACP
+`authenticate` (`oauth-personal`); account/model polling never launches a browser
+or reads token files. Sign-in is asynchronous and retry-safe while pending, with
+sanitized failure messages. Verification is held for the workspace service's
+lifetime; restarting requires explicit reconnection of Google's cached identity.
+Setup creates a private no-prompt/no-MCP session for advertised model selectors.
+Account access and model eligibility remain native runtime decisions, not promises
+that every plan has every model. No API-key billing fallback is performed. Shared
+credential sign-out is unavailable in SuperSurfer; use a native ACP client.
+
+Each turn owns an ACP process, exact session ID and scoped MCP servers. Resumes
+suppress native historical replay and fail closed if loadSession is unsupported.
+The native default mode must be confirmed before sending a prompt; model overrides
+must be advertised. Ask retains native containment and native policy auto-allows,
+not a Codex sandbox. YOLO approves only per-turn allow-once requests; transitions
+back to Ask stop broad-access turns. Built-in ask_question is disabled in favor
+of the scoped SuperSurfer ask_user tool, whose actual-answer requirement persists
+under YOLO. Unknown client requests fail closed. Disconnects never trigger replay,
+model fallback or provider migration. Stops terminate only owned process groups.
+Fast, reasoning controls, steering, auto-review and structured edit attribution
+are not advertised. Native ACP usage updates are observed when supplied; generic
+remaining-account quota is explicitly unavailable. ACP used/size context occupancy
+is not treated as tokens consumed or account quota. The runtime and its credentials
+are neither bundled nor copied. Remote browser/code relay is not implemented.
+
 # Provider usage and manual worker creation
 
 Settings account responses include allowlisted usage observations. Codex quota

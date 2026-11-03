@@ -40,7 +40,7 @@ $$('[data-icon]').forEach(el => {el.innerHTML = icon(el.dataset.icon);});
 const terminal = new Set(['completed','complete','succeeded','success','failed','cancelled','canceled','error','stopped']);
 const active = new Set(['running','launching','starting','stopping']);
 const modelRoles = ['manager','lead','worker'];
-const backendLabels={codex:'Codex',cursor:'Cursor',claude:'Claude Code',opencode:'OpenCode'};
+const backendLabels={codex:'Codex',cursor:'Cursor',claude:'Claude Code',opencode:'OpenCode',antigravity:'Google Antigravity'};
 const currentBackend=()=>state.chat?.preferences?.backend||state.data?.settings?.backends?.[state.scope==='manager'?'manager':state.experimentId?'worker':'lead']||'codex';
 const state = {data:null,view:'workspace',runFilter:'active',queuePriority:false,projectId:null,experimentId:null,tab:'overview',experiment:null,edit:false,scope:null,pinnedAgent:null,chat:null,models:[],account:null,chatVisible:true,chatWidth:390,sidebarWidth:null,sidebarCollapsed:false,projectTreeHeight:null,filesHeight:null,chatMaximized:false,loading:false,modalKind:null,stateSignature:'',sidebarSignature:'',chatSignature:'',experimentRequest:0};
 const metricsCache = new Map();
