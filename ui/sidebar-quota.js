@@ -18,7 +18,7 @@ function duration(window){
 }
 export function paintSidebarQuota(root,records,{refresh,openSettings,loading=false}={}){
  if(!root)return;
- const accounts=Object.keys(labels).map(id=>[id,records.get(id)?.value]).filter(([,value])=>linkedAccount(value));
+ const accounts=Object.keys(labels).map(id=>[id,records.get(id)?.value]).filter(([id,value])=>linkedAccount(value)||id==='antigravity'&&value?.usage?.quota?.account_scope==='antigravity-cli'&&value.usage.quota.windows?.length);
  root.hidden=!accounts.length;if(!accounts.length){root.replaceChildren();return;}
  const focused=document.activeElement?.dataset.quotaProvider,refreshFocused=document.activeElement?.dataset.quotaRefresh!==undefined;
  root.replaceChildren();

@@ -15,7 +15,9 @@ reset timestamps are normalized; model responses, token counts and unknown field
 cannot become account quota. Each group is displayed independently in Settings;
 the sidebar pairs distinct model groups with group names in accessible details.
 Native CLI account scope is explicit and may differ from ACP authentication.
-Reading CLI metadata never connects/authenticates an ACP conversation.
+Reading CLI metadata never connects/authenticates an ACP conversation. A confirmed
+CLI quota observation can keep its sidebar row visible after a service restart
+while the ACP Connect action remains available; chat readiness is unchanged.
 
 A provider-local lock coalesces refreshes. Observations cache for 60 seconds;
 explicit Refresh bypasses the cache. Failed refreshes retain prior values and

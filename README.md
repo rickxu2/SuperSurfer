@@ -176,5 +176,6 @@ show the previous observation as stale, or unavailable when none exists.
 
 These observations belong to the Google account signed into `agy` on the workspace
 host, which can differ from the ACP connection. Reading quota does not connect or
-change either account. Extra AI credits are a separate balance and are not inferred
+change either account. Its sidebar row can remain visible while the ACP chat
+connection needs reconnecting. Extra AI credits are a separate balance and are not inferred
 from the model quota. Session token/context counts are not remaining quota.

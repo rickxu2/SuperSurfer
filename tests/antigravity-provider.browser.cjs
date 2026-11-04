@@ -12,6 +12,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   await page.locator('[data-view=settings]').click();
   const account=page.locator('[data-provider-account="antigravity"]');await account.waitFor();
   await page.waitForFunction(()=>!document.querySelector('[data-account-login="antigravity"]').disabled);
+  await page.locator('[data-quota-provider="antigravity"]').waitFor();
+  assert.equal(await account.locator('[data-account-login]').isVisible(),true,'CLI quota does not authenticate ACP or hide its Connect action');
   await account.locator('[data-account-login]').click();
   await page.waitForFunction(()=>document.querySelector('[data-provider-account="antigravity"] .provider-account-status')?.textContent.includes('Google account connected'));
   assert.equal(await account.locator('[data-account-logout]').isVisible(),false);

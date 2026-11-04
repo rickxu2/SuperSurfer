@@ -20,7 +20,8 @@ Verified on macOS arm64, Python 3.13.17 / Node 22.22.0 / rsync 3.4.1:
   malformed/timeout responses. Eleven backend routing tests pass, including quota
   available from CLI without falsely authenticating ACP.
 - Antigravity browser fixture passes grouped Settings and sidebar percentages,
-  provenance/account scope, source links and existing backend interactions.
+  provenance/account scope, source links and existing backend interactions. CLI quota is also shown before
+  ACP sign-in without hiding its Connect action.
   Existing sidebar regression passes zero/unknown/expired/stale values, unlink/link,
   navigation, accessible labels and light/dark responsive layouts. Screenshot
   `tests/reports/antigravity-cli-quota-settings.png` is synthetic fixture evidence,

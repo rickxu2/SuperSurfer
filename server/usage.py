@@ -131,7 +131,7 @@ def antigravity_quota(result):
                 break
     return {"status": "available" if windows else "unavailable", "windows": windows,
             "observed_at": time.time() if windows else None, "source": "Antigravity CLI read-only /usage",
-            "label": "CLI account quota", "grouped": True,
+            "label": "CLI account quota", "grouped": True, "account_scope": "antigravity-cli",
             "note": "For the Google account signed into agy on this host; it can differ from the ACP account. Extra AI credit balance is separate."}
 
 
