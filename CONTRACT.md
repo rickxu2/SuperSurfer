@@ -1,3 +1,11 @@
+# Paused agent task indicators
+
+An explicit Stop pauses that owned conversation's automatic work and marks its
+task paused/red, even when its saved planning status is preparing or the stopped
+turn is still settling. Resuming that conversation clears its pause. Another
+active agent or an active/queued run keeps the task's aggregate active state.
+The task tooltip explains the pause; historical run results remain independent.
+
 # Google Antigravity backend
 
 The `antigravity` provider launches Google's official `agy_acp_server.par` /

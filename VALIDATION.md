@@ -1,3 +1,27 @@
+# Paused task status — November 3, 2026
+
+Regression first reproduced saved `preparing` and settling-stop task states hiding
+an explicit user pause. Eight task-status unit tests now pass, including persisted
+pause across Store reopen, sibling ownership, unrelated scopes and active run/
+agent precedence. Full `npm test` passes with Python 3.13.17 and rsync 3.4.1:
+787 Python tests (34 skipped), 55 Node tests (50 passed, 5 skipped).
+
+`tests/paused-task-status.browser.cjs` passes the actual Stop action through an
+isolated offline CLI fixture: preparing → working → paused/red, reload, light/dark
+colors, and resumed working/green. The same test also passes with
+`SUPERSURFER_PACKAGED_EXECUTABLE` using the packaged Electron renderer and an
+isolated profile/HTTP fixture. Sidebar screenshot inspected and committed as
+`tests/reports/paused-task-dark.png`. This is not real provider inference.
+`python3 scripts/check-agent-skills.py` and `git diff --check` pass. The board's
+checks action was attempted but cannot start because argv is unconfigured; no
+managed checks/preview success is claimed.
+
+`npm run package:mac` builds the arm64 app and ZIP in `dist/`. Original and extracted
+ZIP apps pass `tests/mac-package.electron.cjs` strict signature, isolated-profile
+launch and sandbox checks. Local ad-hoc signing is not Developer ID signing or
+notarization. See the work item's task evidence for local activation progress.
+Diagnostics and reproduction: `tests/reports/paused-task-indicator.md`.
+
 # Google Antigravity backend — November 3, 2026
 
 Implemented a distinct `antigravity` provider using Google's official ACP runtime,

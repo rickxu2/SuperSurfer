@@ -501,7 +501,8 @@ class Store:
             scope = chat.get("scope", "")
             key = scope.removeprefix("experiment:") if scope.startswith("experiment:") else conversations.get(scope)
             if key in known and (chat.get("busy") or chat.get("message_count", 0)
-                                 or chat.get("task_state") not in {None, "ready"}):
+                                 or chat.get("task_state") not in {None, "ready"}
+                                 or self.get("agent_messages_paused:" + scope, False)):
                 workers.setdefault(key, []).append(chat)
         retired = self.get("retired_native_agents", {})
         experiments = []
@@ -510,6 +511,8 @@ class Store:
             runs = [r for r in normalized["runs"] if r["experiment_id"] == key]
             statuses = {r["status"] for r in runs}
             owned = workers.get(key, [])
+            paused_scopes = {chat["scope"] for chat in owned
+                             if self.get("agent_messages_paused:" + chat["scope"], False)}
             native_busy = any(a.get("task_id") in data["task_ids"] and a.get("project_id") == data["project_id"]
                               and a.get("role") == "worker" and a.get("status") in {"busy", "interactive"}
                               and a["id"] not in retired for a in normalized["agents"])
@@ -519,8 +522,10 @@ class Store:
                 status, detail = "attention", "An active run cannot be verified; inspect Runs."
             elif "queued" in statuses:
                 status, detail = "queued", "An experiment run is queued."
-            elif native_busy or any(chat.get("busy") for chat in owned):
+            elif native_busy or any(chat.get("busy") and chat["scope"] not in paused_scopes for chat in owned):
                 status, detail = "working", "An experiment agent is working."
+            elif paused_scopes:
+                status, detail = "paused", "An experiment agent was paused by the user."
             elif data.get("planning_status"):
                 status, detail = data["planning_status"], "Saved experiment planning status."
             elif any(chat.get("task_state") == "monitoring" for chat in owned):

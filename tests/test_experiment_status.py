@@ -55,3 +55,37 @@ class ExperimentStatusTests(unittest.TestCase):
         scope = "experiment:"+self.key
         self.assertEqual(self.state([], [{"scope": scope, "busy": False, "message_count": 0, "task_state": "ready"}])["status"], "draft")
         self.assertEqual(self.state(["failed"], [{"scope": scope, "busy": False, "task_state": "monitoring"}])["status"], "monitoring")
+
+    def test_user_pause_overrides_saved_preparing_even_while_stop_is_settling(self):
+        scope = "experiment:" + self.key
+        self.store.update_experiment(self.key, self.experiment["version"], {"status": "preparing"})
+        self.store.put("agent_messages_paused:" + scope, True)
+        for busy in (True, False):
+            with self.subTest(busy=busy):
+                result = self.state([], [{"scope": scope, "busy": busy, "message_count": 1, "status": "stopping" if busy else "interrupted"}])
+                self.assertEqual(result["status"], "paused")
+                self.assertIn("paused", result["status_detail"])
+        self.store.put("agent_messages_paused:" + scope, False)
+        self.assertEqual(self.state([], [{"scope": scope, "busy": True}])["status"], "working")
+        self.assertEqual(self.state([], [{"scope": scope, "busy": False, "message_count": 1}])["status"], "preparing")
+
+    def test_paused_sibling_is_visible_but_does_not_hide_an_active_agent(self):
+        conversation = self.store.create_conversation(self.key)
+        scope = conversation["scope"]
+        self.store.put("agent_messages_paused:" + scope, True)
+        self.store.put("chat_archived:" + scope, True)
+        chats = [{"scope": scope, "busy": False, "task_state": "monitoring"}]
+        self.assertEqual(self.state([], chats)["status"], "paused")
+        chats.append({"scope": "experiment:" + self.key, "busy": True})
+        self.assertEqual(self.state([], chats)["status"], "working")
+        for run in ("running", "queued"):
+            self.assertEqual(self.state([run], chats[:1])["status"], run)
+
+    def test_unrelated_pause_does_not_change_task_and_pause_survives_store_reopen(self):
+        self.store.put("agent_messages_paused:experiment:unrelated", True)
+        self.assertEqual(self.state()["status"], "draft")
+        scope = "experiment:" + self.key
+        self.store.put("agent_messages_paused:" + scope, True)
+        self.store.close()
+        self.store = Store(Path(self.tmp.name))
+        self.assertEqual(self.state([], [{"scope": scope, "busy": False, "message_count": 1}])["status"], "paused")
