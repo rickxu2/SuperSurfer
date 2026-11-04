@@ -25,15 +25,23 @@ current=None
 for line in sys.stdin:
  v=json.loads(line);record(v);m=v.get('method');p=v.get('params',{});key=v.get('id')
  if m=='initialize':
-  emit({'jsonrpc':'2.0','id':key,'result':{'protocolVersion':1,'agentInfo':{'name':'antigravity-acp','version':'1.4.5'},'agentCapabilities':{'loadSession':not os.environ.get('SS_AGY_NO_RESUME')},'authMethods':[{'id':'oauth-personal'}]}})
+  emit({'jsonrpc':'2.0','id':key,'result':{'protocolVersion':1,'agentInfo':{'name':'antigravity-acp','title':'Google Antigravity','version':os.environ.get('SS_AGY_VERSION','1.4.5')},'agentCapabilities':{'loadSession':not os.environ.get('SS_AGY_NO_RESUME')},'authMethods':[{'id':'oauth-personal'}]}})
  elif m=='authenticate':
   emit({'jsonrpc':'2.0','id':key,**({'error':{'code':-32000,'message':'NEVER_EXPOSE_TOKEN'}} if os.environ.get('SS_AGY_FAIL_AUTH') else {'result':{}})})
  elif m in ('session/new','session/load'):
   if m=='session/load':emit({'jsonrpc':'2.0','method':'session/update','params':{'sessionId':session,'update':{'sessionUpdate':'agent_message_chunk','content':{'type':'text','text':'HISTORICAL_REPLAY'}}}})
   emit({'jsonrpc':'2.0','id':key,'result':{'sessionId':'foreign-session' if m=='session/load' and os.environ.get('SS_AGY_WRONG_SESSION') else session,'configOptions':options[:1] if os.environ.get('SS_AGY_NO_MODE') else options}})
+  if not os.environ.get('SS_AGY_NO_USAGE'):emit({'jsonrpc':'2.0','method':'session/update','params':{'sessionId':session,'update':{'sessionUpdate':'available_commands_update','availableCommands':[{'name':'usage'}]}}})
  elif m=='session/set_config_option':emit({'jsonrpc':'2.0','id':key,'result':{}})
  elif m=='session/prompt':
   current=key;text=p['prompt'][0]['text'].split('User request:\n')[-1].splitlines()[0]
+  if text=='/usage':
+   if os.environ.get('SS_AGY_USAGE_CRASH'):os._exit(2)
+   if os.environ.get('SS_AGY_USAGE_TOOL'):emit({'jsonrpc':'2.0','id':'unexpected-tool','method':'session/request_permission','params':{'sessionId':session}})
+   report='### Session Usage\n- **Session total:** 1234 tokens\n\n### Quota Limits\n- **Gemini Models**\n  - **Weekly Limit Remaining:** 91% remaining (resets Nov 11, 2026, 02:31 UTC)'
+   if os.environ.get('SS_AGY_USAGE_ERROR'):report='### Quota Limits\n- Unable to retrieve quota status (NEVER_EXPOSE_TOKEN)'
+   emit({'jsonrpc':'2.0','method':'session/update','params':{'sessionId':session,'update':{'sessionUpdate':'agent_message_chunk','content':{'type':'text','text':report}}}})
+   emit({'jsonrpc':'2.0','id':key,'result':{'stopReason':'end_turn'}});continue
   if text=='crash':os._exit(2)
   if text=='hold':continue
   if text=='approval':
@@ -110,6 +118,74 @@ class AntigravityTests(unittest.TestCase):
         self.assertFalse(self.bridge.account()['logout_supported'])
         with self.assertRaises(BridgeError):
             self.bridge.logout()
+
+    def test_quota_uses_only_builtin_on_private_connection_and_caches(self):
+        self.assertEqual('unavailable', self.bridge.quota()['status'])
+        self.assertEqual([], self.wire())
+        self.connect()
+        before = len(self.wire())
+        quota = self.bridge.quota()
+        self.assertEqual(91, quota['windows'][0]['remaining_percent'])
+        self.assertEqual(1794364260, quota['windows'][0]['resets_at'])
+        quota['windows'].clear()
+        self.assertEqual(1, len(self.bridge.quota()['windows']))
+        reads = self.wire()[before:]
+        self.assertEqual(['session/prompt'], [r.get('method') for r in reads])
+        self.assertEqual([{'type': 'text', 'text': '/usage'}], reads[0]['params']['prompt'])
+        self.assertEqual([], self.bridge.list_chats())
+        self.assertIsNone(self.bridge.quota().get('account_tokens'))
+
+    def test_unknown_runtime_or_missing_command_never_dispatches_usage(self):
+        for env in ({'SS_AGY_VERSION': '1.4.6'}, {'SS_AGY_NO_USAGE': '1'}):
+            with self.subTest(env=env), patch.dict(os.environ, env):
+                self.connect()
+                self.assertEqual('unavailable', self.bridge.quota()['status'])
+        self.assertFalse(any(r.get('method') == 'session/prompt' for r in self.wire()))
+
+    def test_failed_quota_never_reconnects_replays_or_exposes_error(self):
+        with patch.dict(os.environ, {'SS_AGY_USAGE_CRASH': '1'}):
+            self.connect()
+        self.assertEqual('unavailable', self.bridge.quota()['status'])
+        before = len(self.wire())
+        self.assertEqual('unavailable', self.bridge.quota()['status'])
+        self.assertEqual(before, len(self.wire()))
+        self.assertEqual(1, sum(r.get('method') == 'session/prompt' for r in self.wire()))
+
+    def test_native_quota_error_does_not_become_zero_or_leak(self):
+        with patch.dict(os.environ, {'SS_AGY_USAGE_ERROR': '1'}):
+            self.connect()
+        quota = self.bridge.quota()
+        self.assertEqual('unavailable', quota['status'])
+        self.assertIsNone(quota['observed_at'])
+        self.assertNotIn('NEVER_EXPOSE', json.dumps(quota))
+
+    def test_quota_timeout_is_bounded_and_discards_channel(self):
+        self.connect()
+        connection = self.bridge._login_connection
+        with patch.object(connection, 'call', side_effect=BridgeError('PRIVATE timeout')) as call:
+            self.assertEqual('unavailable', self.bridge.quota()['status'])
+        self.assertEqual(15, call.call_args.kwargs['timeout'])
+        self.assertIsNotNone(connection.proc.poll())
+        self.assertIsNone(self.bridge._quota_channel)
+        self.assertNotIn('PRIVATE', json.dumps(self.bridge.quota()))
+
+    def test_quota_rejects_unexpected_client_execution_and_discards_result(self):
+        with patch.dict(os.environ, {'SS_AGY_USAGE_TOOL': '1'}):
+            self.connect()
+        self.assertEqual('unavailable', self.bridge.quota()['status'])
+        reply = next(r for r in self.wire() if r.get('id') == 'unexpected-tool' and 'error' in r)
+        self.assertEqual(-32601, reply['error']['code'])
+        self.assertIsNone(self.bridge._quota_channel)
+
+    def test_reconnect_drops_previous_account_quota_cache(self):
+        self.connect()
+        first = self.bridge._login_connection
+        self.assertEqual('available', self.bridge.quota()['status'])
+        with patch.dict(os.environ, {'SS_AGY_USAGE_ERROR': '1'}):
+            self.connect()
+        self.assertIsNot(first, self.bridge._login_connection)
+        self.assertIsNotNone(first.proc.poll())
+        self.assertEqual('unavailable', self.bridge.quota()['status'])
 
     def test_selected_model_native_mode_scoped_tools_and_streaming(self):
         self.connect()

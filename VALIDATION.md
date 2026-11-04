@@ -1,3 +1,47 @@
+# Antigravity remaining quota (November 4, 2026)
+
+Verified native ACP 1.4.5 `/usage` interception before agent execution and observed
+real consumer quota/reset text. See [native evidence](tests/reports/antigravity-native-usage.md)
+for binary/source hashes, wire scope, precision and limitations. The source
+integration retains the private explicit-login session, with a 15-second read
+bound, 60-second connection-local cache, no polling auth/session creation and
+no uncertain replay. Unknown versions, missing commands and native errors fail
+closed. Context occupancy and session token totals remain separate.
+
+- 15 isolated Antigravity wire tests passed, including timeout, execution denial,
+  unsupported runtime, cache reset on reconnect and no replay.
+- Isolated Electron usage check passed without Chrome: both model groups, zero,
+  units, source/reset details, precision note, separate tokens and unavailable replacement.
+- Agent capability-skill validation and `git diff --check` passed.
+- `npm test`: 792 Python tests OK (34 skipped), Node 50 passed/5 skipped.
+  One earlier attempt hit the existing Codex timeout fixture's 150ms initialize
+  deadline while Electron was active; the serial rerun passed. Provider tests
+  are isolated fixtures, not authenticated inference checks.
+- Local integration with the already active paused-status fix e6a6145:
+  795 Python tests OK (34 skipped), Node 50 passed/5 skipped.
+- `npm run package:mac` succeeded on Darwin arm64 from local integration 1b37a6b.
+  App: `../supersurfer-antigravity-local/dist/SuperSurfer-darwin-arm64/SuperSurfer.app`;
+  ZIP: `../supersurfer-antigravity-local/dist/SuperSurfer-0.1.43-mac-arm64.zip`.
+  Original and ZIP-extracted apps passed strict signature, isolated launch and
+  sandbox checks. The delivered package passed the isolated Electron quota UI
+  check. Exact packaged quota and paused-status source matched the validated tree.
+  Workspace archive SHA-256:
+  `062e4b40e2be60e6a156ccaadd2817ea2b2ed11df1bc250b52bae1095be92661`.
+  Signing is local/ad-hoc, not Developer ID/notarization; downloaded Gatekeeper
+  acceptance is not claimed. No Chrome was launched.
+- Authorized local activation verified November 4 after fresh idle/draft checks.
+  Installed desktop and service both use archive/release `062e4b40e2be60e6`.
+  Original workspace/profile/window identity and conversations were retained;
+  the previously installed paused-status fix remains present. SQLite/preferences
+  and the prior app were backed up. The research engine was not restarted.
+  Native cached Google reconnect completed, and the actual account endpoint plus
+  visible sidebar/Settings reported real quota groups, reset times and provenance.
+  A temporarily stale renderer view was recovered using the saved connection;
+  the temporary verification window was closed and original window restored.
+  No Chrome, credential inspection, model inference, merge or release was used.
+- Surfboard `checks` was attempted through `run_board_action`; the block has no
+  command configured and returned an error. No board check/preview pass is claimed.
+
 # Google Antigravity backend — November 3, 2026
 
 Implemented a distinct `antigravity` provider using Google's official ACP runtime,

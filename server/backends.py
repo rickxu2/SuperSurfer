@@ -88,6 +88,8 @@ class BackendRouter:
                 quota = bridge.quota()
             except (BridgeError, OSError):
                 quota["note"] = "Claude plan quota could not be read. Refresh to retry; this experimental control requires a recent CLI and eligible subscription."
+        if backend == "antigravity" and not result.get("login_required") and not result.get("error"):
+            quota = bridge.quota()
         return {**result, "backend": backend, "active_turns": busy, "capabilities": PROVIDERS[backend],
                 "usage": {"quota": quota, "account_tokens": account_tokens, "consumption": usage.consumption(bridge)}}
 

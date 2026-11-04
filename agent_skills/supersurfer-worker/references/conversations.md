@@ -26,6 +26,11 @@ The usage details show provider observations,
 not complete account billing. Codex can report quota windows, account lifetime
 tokens and separate owned-thread observations. Claude can report main-agent turn
 tokens, session cost estimates and plan quota through an experimental native control.
+Antigravity ACP 1.4.5 reports remaining quota through the verified built-in
+`/usage` on its private explicit-login connection, bounded to 15 seconds and
+cached for 60 seconds. Reset times have native minute precision; reconnect
+clears the connection-local cache. Unknown runtimes or native errors stay
+unavailable. Polling never opens a login or starts a model turn.
 OpenCode can report native token/cost aggregates from sanitized exports of its
 owned session. ACP can optionally report USD cost; context occupancy is not
 consumption. Cursor/OpenCode generic account quota, Cursor ACP consumed-token

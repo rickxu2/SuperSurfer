@@ -8,7 +8,7 @@ function windowsFor(quota){
  const first=windows.find(w=>w.label==='codex · primary')||windows.find(w=>w.label==='five hour')||windows[0];
  const group=first?.label?.split(' · ')[0];
  const second=windows.find(w=>w!==first&&(w.label===`${group} · secondary`||w.label==='seven day'))||windows.find(w=>w!==first&&w.label?.split(' · ')[0]===group&&w.window_minutes!==first?.window_minutes);
- return [first,second];
+ return [first,second||(quota?.source==='Antigravity ACP 1.4.5 built-in /usage'?windows.find(w=>w!==first):undefined)];
 }
 function duration(window){
  const mins=window?.window_minutes;

@@ -58,6 +58,9 @@ class ProviderServiceTests(unittest.TestCase):
                 self.service.action('account.choose', {'backend': 'antigravity'})
             self.service.action('account.login', {'backend': 'antigravity'})
             self.cli.wait(lambda: not self.service.codex.account('antigravity', refresh=True)['login_required'])
+            quota = self.service.codex.account('antigravity')['usage']['quota']
+            self.assertEqual('available', quota['status'])
+            self.assertEqual(91, quota['windows'][0]['remaining_percent'])
             chosen = self.service.action('account.choose', {'backend': 'antigravity'})
             self.assertEqual({'manager': 'antigravity', 'lead': 'antigravity', 'worker': 'antigravity'}, chosen['settings']['backends'])
             self.service.action('chat.settings', {'scope': self.scope, 'model': 'gemini-test'})
