@@ -146,6 +146,47 @@ Address actionable review feedback and failures, then report the PR URL and test
 results. Creating a PR does not authorize merging, releasing or restarting the
 user's running workspace.
 
+## 6. Update the running local app when authorized
+
+Honor a user's existing instruction to handle local app updates. In this workspace,
+that preference is recorded in the root AGENTS.md. Once an app-development task's
+source is accepted and its build/checks pass, include activation of that build in
+the deliverable when the running app/service still uses older code. Do not merely
+return manual restart commands or ask for the same authorization again. A workflow
+preference is not a recurring monitor and does not itself schedule future work.
+
+1. Compare the exact running desktop bundle and service release with the validated
+   build. Discover their current paths, PIDs, workspace root, state directory, port,
+   manager home and native window profile; never reuse a PID from an earlier turn.
+2. Check dirty editor buffers and other active agent turns, terminals/builds and
+   jobs. Do not discard drafts, interrupt another task or stop the research manager.
+   Wait for safe completion when possible; ask only for an actual unresolved
+   save/discard decision or an unavoidable interruption. A reconnect does not
+   preserve unsaved text by itself.
+3. Keep the previous working bundle/release and take a consistent backup of the
+   workspace database and connection/window preferences. Preserve those identities;
+   do not reset provider sessions, copy credentials or change trust settings.
+4. Quit the owned desktop instance gracefully, stop only its verified matching
+   workspace service, then launch the validated bundle using the same window
+   profile and reconnect with the same workspace folder, port and manager home.
+   Desktop bootstrap reuses an already-healthy service; reopening the app alone
+   does not replace that service's code. No separate research-engine restart is
+   implied. If this agent is hosted by the service being replaced, arrange a
+   bounded, independently surviving handoff before shutdown so it cannot kill its
+   own update halfway through. Do not promise a later restart without saving the
+   actual handoff and its completion/rollback checks.
+5. Verify the new desktop path, service PID/release, authenticated workspace health,
+   restored project/conversation and requested behavior. On failure, restore the
+   previous bundle/release against the preserved state when compatible; do not
+   overwrite newer user data. Record actual activation or rollback evidence with
+   update_task. An unverified launch is not a completed update.
+
+Local activation is separate from a public release. Retain the normal checks,
+source review and PR workflow; this preference does not authorize merging a new
+PR unless the user also requested that merge. Never expand a local update into a
+remote/shared-host upgrade. Report local/ad-hoc signing and notarization limits
+honestly, and honor later user requests to defer an update.
+
 ## Releases are a separate step
 
 Build locally for the fix-and-PR workflow; do not bump versions or publish release
