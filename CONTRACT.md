@@ -1,3 +1,9 @@
+# Files sidebar navigation
+
+Files starts collapsed and expands only through its summary or the editor Files
+control. Its open/collapsed choice is remembered in window/workspace navigation,
+including reloads, independently of project and task selection.
+
 # Provider usage and manual worker creation
 
 Settings account responses include allowlisted usage observations. Codex quota

@@ -13,7 +13,9 @@ editor uses Monaco. The optional VS Code extension editor requires its separate 
 to be installed and selected. The default Code block is a clean editing surface:
 SuperSurfer's **Files** section sits above Projects, while the selected native
 engine keeps language/extension support without its embedded sidebar or IDE chrome.
-Monaco likewise uses SuperSurfer file browsing. Optional **Full VS Code**
+Monaco likewise uses SuperSurfer file browsing. Files starts collapsed; opening or closing it is a
+remembered window/workspace choice across project selection and reloads. Project
+navigation alone does not expand it. Optional **Full VS Code**
 (`vscode`), **Terminal** (`terminal`) and **Ports** (`ports`) tiles are separately
 configurable; Full VS Code retains its native Explorer and broader workbench.
 A newly created **Project terminal** starts in this project's absolute repository
