@@ -1,3 +1,8 @@
+# Paused task indicator
+
+- [x] Derive paused task status from explicit owned-conversation Stop state;
+  show red, preserve across reload, and restore green on resumed active work.
+
 # Google Antigravity (source build)
 
 - [x] Official ACP provider, Google personal-account connection, advertised model
