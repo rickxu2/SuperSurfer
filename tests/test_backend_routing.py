@@ -44,6 +44,38 @@ class ProviderServiceTests(unittest.TestCase):
         self.assertTrue(any(row['scope']==self.scope for row in self.service.codex.list_chats()))
         with self.assertRaises(BridgeError):self.service.action('chat.settings',{'scope':self.scope,'backend':'codex'})
 
+    def test_antigravity_google_connection_defaults_and_durable_routing(self):
+        from test_antigravity import FAKE
+        import sys
+        binary = self.cli.root / 'agy_acp_server.par'
+        binary.write_text('#!' + sys.executable + '\n' + FAKE)
+        binary.chmod(0o700)
+        with patch.dict(os.environ, {'SUPERSURFER_ANTIGRAVITY': str(binary)}):
+            account = self.service.codex.account('antigravity')
+            self.assertTrue(account['installed'])
+            self.assertTrue(account['login_required'])
+            with self.assertRaises(ValueError):
+                self.service.action('account.choose', {'backend': 'antigravity'})
+            self.service.action('account.login', {'backend': 'antigravity'})
+            self.cli.wait(lambda: not self.service.codex.account('antigravity', refresh=True)['login_required'])
+            chosen = self.service.action('account.choose', {'backend': 'antigravity'})
+            self.assertEqual({'manager': 'antigravity', 'lead': 'antigravity', 'worker': 'antigravity'}, chosen['settings']['backends'])
+            self.service.action('chat.settings', {'scope': self.scope, 'model': 'gemini-test'})
+            for fields in ({'fast_mode': True}, {'reasoning': 'high'}, {'approval_mode': 'auto_review'}):
+                with self.assertRaises(ValueError):
+                    self.service.action('chat.settings', {'scope': self.scope, **fields})
+            self.service.action('chat.send', {'scope': self.scope, 'text': 'hello'})
+            self.cli.wait(lambda: not self.service.chat(self.scope)['busy'])
+            before = self.service.chat(self.scope)
+            self.assertEqual('completed', before['status'])
+            self.service.codex.close()
+            self.service.codex = BackendRouter(self.service.directory, self.service.store, self.service.context_provider, self.service._chat_scope, self.service.agent_action)
+            after = self.service.chat(self.scope)
+            self.assertEqual(before['thread_id'], after['thread_id'])
+            self.assertEqual('antigravity', after['backend'])
+            with self.assertRaises(BridgeError):
+                self.service.action('chat.settings', {'scope': self.scope, 'backend': 'codex'})
+
     def test_login_rejects_credentials_and_only_returns_official_terminal_command(self):
         with self.assertRaises(ValueError):self.service.action('account.login',{'backend':'claude','token':'SECRET'})
         value=self.service.action('account.login',{'backend':'claude'});self.assertEqual([str(self.cli.binary.resolve()),'auth','login'],shlex.split(value['command']));self.assertEqual('terminal',value['type'])

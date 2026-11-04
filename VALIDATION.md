@@ -1,3 +1,57 @@
+# Google Antigravity backend — November 3, 2026
+
+Implemented a distinct `antigravity` provider using Google's official ACP runtime,
+with explicit asynchronous `oauth-personal` connection, dynamic native model
+selectors, scoped MCP sessions, resume/pinning, Ask/YOLO approvals and owned Stop.
+Updated account/setup, default-provider, new-agent and composer paths, and the
+affected role/editor guidance. App/skill versions remain 0.1.43: this is a feature
+branch/local development package, not a new published release.
+
+Verification used Python 3.13.17, Node 22.22.0, rsync 3.4.1 and Chrome on macOS arm64:
+
+- `npm test`: 784 Python tests, OK (34 skipped); 54 Node tests, 49 passed,
+  5 skipped, zero failed. Initial failures came from unsupported system Python
+  3.9 and Apple's rsync; prepared tools were selected through a temporary PATH.
+- Eight Antigravity wire tests pass, including failed OAuth sanitization, no
+  polling-triggered login, private setup without inference, explicit model/mode
+  checks, session resume/history suppression, mismatched-session rejection,
+  stop/permission retirement, YOLO allow-once and no crash replay. Ten real-Service
+  routing tests pass, including first-machine Google selection and restart pinning.
+- `tests/antigravity-provider.browser.cjs`: passed Google connection, advertised
+  model selection, streaming, approval denial, Stop, pinning and capability controls
+  against an isolated offline ACP fixture. Existing OpenCode browser test passes.
+  Settings and conversation screenshots were visually inspected and saved in the
+  work item's artifact library; these are fixture evidence, not Google inference.
+- Google's official ACP registry supplied macOS arm64 runtime 1.4.5. Downloaded
+  archive SHA-256 matched
+  `886fff7767d08994ca39eb02c3d01a7532c7325a94aa33aaf52d52068733284f`.
+  Native `initialize` in an empty temporary GEMINI_HOME advertised ACP v1,
+  personal OAuth, loadSession and MCP capabilities; unauthenticated
+  session creation failed closed. No Google account files or model prompts used.
+- `python3 scripts/check-agent-skills.py` and `git diff --check`: passed.
+- `npm run package:mac`: passed, producing
+  `dist/SuperSurfer-darwin-arm64/SuperSurfer.app` and
+  `dist/SuperSurfer-0.1.43-mac-arm64.zip`. Packaging reported its existing optional
+  `.icon` format warning; the `.icns` application build completed successfully.
+- `node tests/mac-package.electron.cjs`: passed strict signature, isolated-profile
+  launch, setup readiness and renderer sandbox checks for both original and
+  ZIP-extracted apps. Explicit `codesign --verify --deep --strict` also passed;
+  bundle xattrs contain no quarantine attribute. Ad-hoc signing is local only,
+  not Developer ID signing/notarization or proof of downloaded Gatekeeper behavior.
+
+The task's managed Checks action was attempted and rejected because its command
+array is empty. No board-passed or managed-preview receipt is claimed; the above
+results are successful direct process checks. The running workspace was not
+restarted or connected to a real job. Google-authenticated Free/Pro/Ultra inference
+and remote browser login remain untested. The official ACP runtime is separately
+installed; SuperSurfer does not bundle it, read credentials, switch to API billing,
+or implement shared Google credential sign-out or remaining quota reads.
+
+Sources: [Google transition announcement](https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/),
+[official ACP registry](https://github.com/agentclientprotocol/registry/blob/main/antigravity-acp/agent.json),
+[Google authentication](https://antigravity.google/docs/install),
+[Google ACP changelog](https://antigravity.google/changelog?tab=cli).
+
 # Sidebar quota strip — October 27, 2026
 
 The new isolated `tests/sidebar-quota.browser.cjs` verifies linked-only rows outside

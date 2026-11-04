@@ -389,3 +389,28 @@ model catalogs and native-session availability are separate capabilities; a
 successful login does not prove this block's tools, extensions or data sources
 are ready. Preserve existing native ownership and uncertain action identities.
 See [conversation continuity](../supersurfer-worker/references/conversations.md).
+
+
+## Google Antigravity backend
+
+Google Antigravity uses Google's official ACP runtime, separate from the `agy`
+CLI. Its scoped SuperSurfer tools retain this role's ownership and Surfboard
+limits. Only an explicit Connect Google account action starts personal Google
+OAuth; polling does not open a browser. Credentials stay native, with no API-key
+fallback or token collection in chat. Reconnect after a workspace service restart.
+The host needs the official ACP executable and matching helper; remote sign-in
+must finish through the native runtime's host browser. Do not promise browser/code
+relay. A missing executable or sign-in is setup to diagnose, not evidence that
+existing runs stopped or that another agent owns this task.
+
+Existing conversations retain native provider/session identity. Ask/YOLO use
+native permissions; Ask is not a Codex filesystem sandbox, and native policy may
+allow workspace reads/edits. YOLO handles allow-once callbacks without granting
+shared allow-always rules. Use scoped ask_user and wait for real answers. Fast,
+reasoning controls, active-turn steering, automatic approval review, structured
+edit attribution and remaining account quota are not advertised. Usage is only
+observed native ACP data. Never infer quota from plan names or old Gemini CLI
+limits. Previous native-owner AutoML histories do not gain these tools. Installing
+or connecting a provider does not authorize deployment, queue submission, recurring
+work or cross-project actions. Preparation, explicit queue requests and autonomous
+suggestions remain distinct.

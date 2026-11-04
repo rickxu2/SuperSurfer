@@ -27,7 +27,7 @@ published 0.1.43 release.
   and save a named version. Ask an agent to apply a specific workflow change
   directly, or review its proposal first. Apply changes to one task, selected linked tasks,
   or future tasks; the detailed graph remains available under **Advanced**.
-- **Bring your agents.** Work with **Codex, Cursor, Claude Code or OpenCode** through
+- **Bring your agents.** Work with **Codex, Cursor, Claude Code, OpenCode or Google Antigravity** through
   persistent project leads and task workers. Give each a role, share context,
   ask questions and follow their progress across projects.
   In source builds, **New agent** lets you name an idle worker, choose its provider
@@ -121,3 +121,41 @@ Use `opencode auth login` / `opencode auth logout` on the workspace host to mana
 upstream accounts. SuperSurfer never signs out all of a shared OpenCode setup.
 The adapter launches an ACP client process using that configuration; it does not
 attach to an unrelated OpenCode UI session or change a shared HTTP server.
+
+
+## Google Antigravity and Google AI subscriptions
+
+Source builds support **Google Antigravity** in Settings → Coding backends and
+new conversations. Google moved individual Free/Google AI Pro/Ultra access from
+Gemini CLI to Antigravity on June 18, 2026. This adapter uses Google's official
+**Antigravity ACP server**, a separate runtime from the `agy` terminal app.
+It does not wrap the CLI or extract Google tokens for another model client.
+
+1. Download the matching platform archive from the
+   [official ACP registry](https://github.com/agentclientprotocol/registry/blob/main/antigravity-acp/agent.json).
+   Check its published SHA-256 and keep `agy_acp_server.par` (Windows:
+   `agy_acp_server.exe`) beside its matching `localharness_external` helper.
+   On macOS/Linux, make both executable.
+2. Put the runtime on the workspace host's PATH (or link the executable into
+   `~/.local/bin`), or set `SUPERSURFER_ANTIGRAVITY` to its absolute executable
+   path in the workspace service environment. For a separately located helper,
+   set `ANTIGRAVITY_HARNESS_PATH`. These proprietary binaries are not bundled.
+3. Select **Google Antigravity → Connect Google account**. Google's runtime owns
+   the browser sign-in and cached credentials. Use the personal Google account
+   associated with your Free, Pro or Ultra plan. Reconnect after a workspace
+   service restart; status polling never initiates OAuth. On a remote host,
+   complete the runtime's browser authentication there; this adapter does not
+   relay OAuth codes or URLs through chat.
+
+The adapter uses `oauth-personal` only; it does not silently fall back to API-key
+billing. Plan quotas and optional credit overages follow your
+[Antigravity plan](https://antigravity.google/docs/plans). Its setup session reads
+model choices without a model prompt, project tools or inference. Model selection,
+streaming, session resume, scoped SuperSurfer tools, Ask/YOLO and Stop are supported.
+Ask uses Antigravity's native default permissions, not a Codex filesystem sandbox;
+native reads/edits may be allowed by its own policy. YOLO answers native permission
+requests once without writing shared allow-always rules. Codex automatic approval
+review, Fast, effort controls, active-turn steering, structured edit attribution
+and account quota readings are not advertised. Usage appears only when the runtime
+emits supported ACP usage events. Sign-out stays in the native ACP client because
+credentials can be shared with other Google clients.

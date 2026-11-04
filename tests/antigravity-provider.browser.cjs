@@ -1,0 +1,41 @@
+'use strict';
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{spawn}=require('node:child_process');
+(async()=>{
+ const root=path.resolve(__dirname,'..'),fixture=spawn(process.env.PYTHON||'python3',['tests/backend_runtime_fixture.py'],{cwd:root,stdio:['pipe','pipe','pipe']});let browser,stderr='';fixture.stderr.on('data',v=>stderr+=v);
+ try{
+  const meta=await new Promise((resolve,reject)=>{let text='';fixture.stdout.on('data',v=>{text+=v;if(text.includes('\n'))resolve(JSON.parse(text.split('\n')[0]));});fixture.on('exit',code=>reject(new Error(code+' '+stderr)));});
+  const token=fs.readFileSync(path.join(meta.directory,'token'),'utf8').trim();
+  browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/opt/google/chrome/chrome',headless:true,args:['--no-sandbox']});
+  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(20000);
+  await page.addInitScript(({token,id})=>{sessionStorage.setItem('supersurfer-token',token);localStorage.setItem('supersurfer-workspace',JSON.stringify({view:'workspace',projectId:'p1',experimentId:id,tab:'overview',chatVisible:true}));},{token,id:meta.experiment});
+  await page.goto('http://127.0.0.1:'+meta.port);
+  await page.locator('[data-view=settings]').click();
+  const account=page.locator('[data-provider-account="antigravity"]');await account.waitFor();
+  await page.waitForFunction(()=>!document.querySelector('[data-account-login="antigravity"]').disabled);
+  await account.locator('[data-account-login]').click();
+  await page.waitForFunction(()=>document.querySelector('[data-provider-account="antigravity"] .provider-account-status')?.textContent.includes('Google account connected'));
+  assert.equal(await account.locator('[data-account-logout]').isVisible(),false);
+  assert.equal(await page.locator('[name=backend_worker] option[value=antigravity]').count(),1);
+  await page.screenshot({path:'/tmp/antigravity-settings.png'});
+  await page.locator('[data-experiment="'+meta.experiment+'"]').first().click();
+  const backend=page.getByLabel('Conversation backend');await backend.selectOption('antigravity');
+  await page.waitForFunction(()=>document.querySelector('#chat-backend')?.value==='antigravity'&&!document.querySelector('#chat-send').disabled);
+  assert.equal(await page.getByLabel('Conversation reasoning effort').isDisabled(),true);
+  assert.equal(await page.locator('[data-action="toggle-fast"]').isDisabled(),true);
+  assert.equal(await page.getByLabel('Approval handling').locator('option[value="auto_review"]').count(),0);
+  await page.locator('#chat-model').selectOption('gemini-test');
+  await page.waitForFunction(()=>!document.querySelector('#chat-send').disabled);
+  await page.locator('#chat-input').fill('hello');await page.locator('#chat-send').click();
+  await page.getByText('Hello world',{exact:true}).waitFor();
+  await page.waitForFunction(()=>!document.querySelector('#chat-send').disabled);
+  assert.equal(await backend.isDisabled(),true,'Existing chat stays bound to Antigravity');
+  await page.locator('#chat-input').fill('approval');await page.locator('#chat-send').click();
+  await page.locator('[data-action="deny-approval"]').waitFor();await page.locator('[data-action="deny-approval"]').click();
+  await page.waitForFunction(()=>!document.querySelector('#chat-send').disabled);
+  await page.locator('#chat-input').fill('hold');await page.locator('#chat-send').click();
+  await page.waitForFunction(()=>!document.querySelector('#chat-stop').disabled);await page.locator('#chat-stop').click();
+  await page.waitForFunction(()=>!document.querySelector('#chat-send').disabled);
+  await page.screenshot({path:'/tmp/antigravity-conversation.png'});
+  assert.deepEqual(errors,[]);console.log('PASS Antigravity Google connection, native model selection, streaming, approvals, stop, pinning and capability controls (offline ACP fixture)');
+ }finally{if(browser)await browser.close();fixture.stdin.end();await new Promise(resolve=>fixture.once('exit',resolve));}
+})().catch(error=>{console.error(error);process.exitCode=1;});

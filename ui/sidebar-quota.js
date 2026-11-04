@@ -1,5 +1,5 @@
 // Account quota only: never substitute host token totals or context occupancy.
-const labels={codex:'Codex',claude:'Claude Code',cursor:'Cursor',opencode:'OpenCode'};
+const labels={codex:'Codex',claude:'Claude Code',cursor:'Cursor',opencode:'OpenCode',antigravity:'Google Antigravity'};
 export function linkedAccount(value){
  return !!value?.account&&value.installed!==false&&!value.login_required&&(!value.error||value.usage_stale)&&value.account.type===(value.backend==='codex'?'chatgpt':value.backend);
 }
