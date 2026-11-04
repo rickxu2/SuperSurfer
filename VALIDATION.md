@@ -17,7 +17,19 @@ closed. Context occupancy and session token totals remain separate.
   One earlier attempt hit the existing Codex timeout fixture's 150ms initialize
   deadline while Electron was active; the serial rerun passed. Provider tests
   are isolated fixtures, not authenticated inference checks.
-- Mac package/activation evidence is recorded separately when complete.
+- Local integration with the already active paused-status fix e6a6145:
+  795 Python tests OK (34 skipped), Node 50 passed/5 skipped.
+- `npm run package:mac` succeeded on Darwin arm64 from local integration 1b37a6b.
+  App: `../supersurfer-antigravity-local/dist/SuperSurfer-darwin-arm64/SuperSurfer.app`;
+  ZIP: `../supersurfer-antigravity-local/dist/SuperSurfer-0.1.43-mac-arm64.zip`.
+  Original and ZIP-extracted apps passed strict signature, isolated launch and
+  sandbox checks. The delivered package passed the isolated Electron quota UI
+  check. Exact packaged quota and paused-status source matched the validated tree.
+  Workspace archive SHA-256:
+  `062e4b40e2be60e6a156ccaadd2817ea2b2ed11df1bc250b52bae1095be92661`.
+  Signing is local/ad-hoc, not Developer ID/notarization; downloaded Gatekeeper
+  acceptance is not claimed. No Chrome was launched.
+- Live activation remains pending a safe idle window; no other task was interrupted.
 - Surfboard `checks` was attempted through `run_board_action`; the block has no
   command configured and returned an error. No board check/preview pass is claimed.
 
