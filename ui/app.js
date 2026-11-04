@@ -70,6 +70,7 @@ async function readNavigation() {
   state.chatWidth = Number.isFinite(savedNavigation.chatWidth) ? Math.min(760,Math.max(280,savedNavigation.chatWidth)) : 390;
   state.sidebarWidth = Number.isFinite(savedNavigation.sidebarWidth) ? Math.min(600,Math.max(160,savedNavigation.sidebarWidth)) : null;
   state.sidebarCollapsed=savedNavigation.sidebarCollapsed===true;
+  $('#workspace-files-section').open=savedNavigation.filesOpen===true;
   state.projectTreeHeight=Number.isFinite(savedNavigation.projectTreeHeight)?Math.max(60,Math.min(1200,savedNavigation.projectTreeHeight)):null;
   state.filesHeight=Number.isFinite(savedNavigation.filesHeight)?Math.max(60,Math.min(1200,savedNavigation.filesHeight)):null;
   if(!Object.hasOwn(savedNavigation,'filesHeight'))try{const old=Number(localStorage.getItem('supersurfer-files-height'));if(old>0&&Number.isFinite(old))state.filesHeight=Math.max(60,Math.min(1200,old+37));}catch{}
@@ -102,7 +103,7 @@ function restoreNavigation(data) {
 function persistNavigation() {
   if(panelWindows.detached)return;
   if(state.view==='workspace'&&state.projectId){const key=taskTabKey(state.projectId,state.experimentId);delete taskTabs[key];taskTabs[key]=state.tab;taskTabs=Object.fromEntries(Object.entries(taskTabs).slice(-512));}
-  const value = { taskTabs, view: state.view, projectId: state.projectId, experimentId: state.experimentId, tab: state.tab, chatVisible: state.chatVisible, chatWidth: state.chatWidth, sidebarWidth: state.sidebarWidth, sidebarCollapsed:state.sidebarCollapsed, projectTreeHeight:state.projectTreeHeight, filesHeight:state.filesHeight, chatMaximized: state.chatMaximized, pinnedAgent:state.pinnedAgent };
+  const value = { taskTabs, view: state.view, projectId: state.projectId, experimentId: state.experimentId, tab: state.tab, chatVisible: state.chatVisible, chatWidth: state.chatWidth, sidebarWidth: state.sidebarWidth, sidebarCollapsed:state.sidebarCollapsed, projectTreeHeight:state.projectTreeHeight, filesHeight:state.filesHeight, filesOpen:$('#workspace-files-section').open, chatMaximized: state.chatMaximized, pinnedAgent:state.pinnedAgent };
   try { localStorage.setItem('supersurfer-workspace', JSON.stringify(value)); } catch {}
   savedNavigation = value;
   if (window.superSurferDesktop?.setWorkspace) window.superSurferDesktop.setWorkspace(value).catch(() => {});
@@ -274,7 +275,7 @@ const panelWindows=createPanelWindows({capture:()=>({projectId:state.projectId,e
 function pickWorkspaceFile(onChoose,{pdfOnly=false,title='Open file',uploadTarget='editor'}={}){const p=project();if(!p)return;filePicker.open({projectId:p.id,repo:p.repo,pdfOnly,title,onChoose,onUpload:readOnly()?null:()=>fileUploads.pick(uploadTarget),onError:error=>toast(error.message,true)});}
 async function loadWorkspacePdf(url,{signal}={}){const response=await fetch(url,{signal,headers:sessionStorage.getItem('supersurfer-token')?{Authorization:'Bearer '+sessionStorage.getItem('supersurfer-token')}:{}});if(!response.ok)throw new Error('PDF could not be loaded ('+response.status+').');return new Uint8Array(await response.arrayBuffer());}
 const editorSettings=createEditorSettings({api,action,readOnly:()=>readOnly(),hasUnsaved:()=>codeEditor.hasUnsaved(),onConfigureExtension:configureEditorExtension});
-const codeEditor=createCodeEditor({api,action,editorSettings,readOnly:()=>readOnly(),onOpenWorkspaceFile:path=>openPageCode({path}),onToggleFiles:()=>{if(panelWindows.detached){pickWorkspaceFile(path=>codeEditor.openFile(path));return;}const section=$('#workspace-files-section');if(state.sidebarCollapsed){state.sidebarCollapsed=false;section.open=true;applySidebarLayout();persistNavigation();}else section.open=!section.open;},onExtensions:()=>{if(panelWindows.detached){toast('Open workspace Settings → Editor in the main window.');return;}state.view='settings';renderMain();},onAskAgent:prepareCodeQuestion,onPickFile:pickWorkspaceFile,onUpload:()=>fileUploads.pick('editor'),onCompare:showCompareDialog,loadBytes:loadWorkspacePdf,onSave:record=>latexPanel.sourceSaved(record)});
+const codeEditor=createCodeEditor({api,action,editorSettings,readOnly:()=>readOnly(),onOpenWorkspaceFile:path=>openPageCode({path}),onToggleFiles:()=>{if(panelWindows.detached){pickWorkspaceFile(path=>codeEditor.openFile(path));return;}const section=$('#workspace-files-section');if(state.sidebarCollapsed){state.sidebarCollapsed=false;section.open=true;applySidebarLayout();}else section.open=!section.open;applyProjectTreeHeight();persistNavigation();},onExtensions:()=>{if(panelWindows.detached){toast('Open workspace Settings → Editor in the main window.');return;}state.view='settings';renderMain();},onAskAgent:prepareCodeQuestion,onPickFile:pickWorkspaceFile,onUpload:()=>fileUploads.pick('editor'),onCompare:showCompareDialog,loadBytes:loadWorkspacePdf,onSave:record=>latexPanel.sourceSaved(record)});
 const latexPanel=createLatexPanel({api,action,editorSettings,onError:error=>toast(error.message,true),readOnly:()=>readOnly(),hasUnsaved:projectId=>codeEditor.hasUnsaved(projectId),
  onSource:({path,...range})=>openPageCode({path,range}),
  onSetup:()=>prepareCodeQuestion('Set up the supported LaTeX compiler on this connected workspace. Check system pdfLaTeX, BibTeX, bubblewrap, prlimit and Poppler (pdfinfo, pdftotext, pdftoppm), then verify compile_latex can compile and inspect a small paper. Preserve project source and existing host environments. If administrator access is needed, explain the exact missing dependency and ask for that access. Do not use an external compiler service or search private service state.', 'Compiler setup message prepared. Send when ready.'),
@@ -1818,5 +1819,7 @@ function chooseReusableBlock(){return new Promise(async resolve=>{try{const data
  for(const name of ['pointerup','pointercancel','lostpointercapture'])handle.addEventListener(name,finish);
  handle.addEventListener('keydown',event=>{if(!['ArrowUp','ArrowDown','Home','End'].includes(event.key))return;event.preventDefault();const bounds=filesHeightBounds(),height=section.getBoundingClientRect().height;resize(event.key==='Home'?bounds.min:event.key==='End'?bounds.max:height+(event.key==='ArrowUp'?-20:20));persistNavigation();});
  handle.addEventListener('dblclick',()=>{state.filesHeight=null;applyProjectTreeHeight();persistNavigation();});
+ // Save the explicit choice before navigation/reload; native toggle is queued.
+ section.querySelector('summary').addEventListener('click',event=>{event.preventDefault();section.open=!section.open;applyProjectTreeHeight();persistNavigation();});
  section.addEventListener('toggle',applyProjectTreeHeight);
 }

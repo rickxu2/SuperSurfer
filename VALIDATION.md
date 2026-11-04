@@ -52,6 +52,34 @@ Sources: [Google transition announcement](https://developers.googleblog.com/an-i
 [Google authentication](https://antigravity.google/docs/install),
 [Google ACP changelog](https://antigravity.google/changelog?tab=cli).
 
+# Project selection preserves Files choice — November 3, 2026
+
+The Files default-expanded regression failed before the fix. The isolated
+`tests/sidebar-sections.browser.cjs` now passes browser and desktop layouts:
+first-project selection leaves Files collapsed, explicit expansion survives
+project switching/reload, collapsing survives reload, and section sizing remains
+correct. Screenshots were inspected. Native preference round-trip coverage passes.
+
+With Python 3.13.17 and installed rsync 3.4.1 ahead of the system binaries,
+`npm test` passes: 775 Python tests (34 skipped), 55 Node tests (50 passed,
+5 skipped). The initial full run had seven unrelated node-setup failures because
+macOS rsync does not support `--protect-args`; the unchanged baseline reproduces
+them. `python3 scripts/check-agent-skills.py` and `git diff --check` pass.
+The applied board has no configured checks/preview argv; its checks action
+refused to start, so these are direct repository receipts, not board-check evidence.
+
+`npm run package:mac` produces the local arm64 app and
+`dist/SuperSurfer-0.1.43-mac-arm64.zip`. The original and ZIP-extracted apps pass
+`tests/mac-package.electron.cjs` strict signature, isolated-profile launch and
+renderer sandbox checks. A separate packaged-renderer interaction against the
+isolated HTTP fixture verifies first-project selection and explicit Files
+open/close/reload behavior; native preference sanitization is tested separately.
+No live workspace is restarted. The bundle is ad-hoc signed, not Developer ID
+signed or notarized; a local launch does not establish downloaded Gatekeeper trust.
+
+Diagnostics: reviewed redacted excerpt and reproduction in
+`tests/reports/project-selection-files.md`.
+
 # Sidebar quota strip — October 27, 2026
 
 The new isolated `tests/sidebar-quota.browser.cjs` verifies linked-only rows outside

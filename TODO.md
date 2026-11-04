@@ -9,6 +9,11 @@
 - [ ] Native remaining-quota reads, shared credential logout and separate effort
   picker are not implemented; supported ACP cost events can be observed.
 
+# Project selection Files fix
+
+- [x] Start Files collapsed and preserve the explicit open/collapsed choice across
+  project selection and reloads; cover browser and desktop sidebar navigation.
+
 # Provider usage and manual agents (source build)
 
 - [x] Compact linked-only quota bars directly below sidebar Settings, with two

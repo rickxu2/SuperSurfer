@@ -13,3 +13,13 @@ test('custom experiment tabs survive native preference round trips',()=>{
 });
 
 test('task tabs survive native persistence and reject foreign values',()=>{const value=workspacePreference({taskTabs:{'vla/E15':'results','vla/E12':'runs','vla/_project':'compute','../bad':'editor','vla/E17':{},'vla/E18':'javascript:alert(1)'}});assert.deepEqual(value.taskTabs,{'vla/E15':'results','vla/E12':'runs','vla/_project':'compute'});});
+
+// The renderer restores native window preferences ahead of browser storage.
+test('Files expansion survives native preference round trips with a collapsed default',()=>{
+ for(const filesOpen of [false,true,false]){
+  const restored=workspacePreference(JSON.parse(JSON.stringify(workspacePreference({filesOpen}))));
+  assert.equal(restored.filesOpen,filesOpen);
+ }
+ assert.equal(workspacePreference({}).filesOpen,false);
+ assert.equal(workspacePreference({filesOpen:'true'}).filesOpen,false);
+});
