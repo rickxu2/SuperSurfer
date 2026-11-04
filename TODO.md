@@ -1,3 +1,11 @@
+# Antigravity CLI remaining usage
+
+- [x] Native read-only JSON quota query, version/command guard, per-group remaining
+  percentages and reset times, cache/forced refresh and honest stale/unavailable state.
+- [x] Explicit CLI account scope separate from ACP sign-in; Settings and sidebar
+  provenance/group labels. Native live metadata read verified without inference.
+- [ ] Extra AI credit balances are separate and not inferred from model quota.
+
 # Google Antigravity (source build)
 
 - [x] Official ACP provider, Google personal-account connection, advertised model
@@ -6,7 +14,7 @@
   uncertain disconnects; native no-inference handshake checked in an empty profile.
 - [ ] Authenticated Google Free/Pro/Ultra inference and remote-host browser login
   require a user-authenticated native runtime; not claimed by offline fixtures.
-- [ ] Native remaining-quota reads, shared credential logout and separate effort
+- [ ] Shared credential logout and separate effort
   picker are not implemented; supported ACP cost events can be observed.
 
 # Project selection Files fix

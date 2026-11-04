@@ -18,6 +18,13 @@ from pathlib import Path
 def emit(v): print(json.dumps(v),flush=True)
 def record(v):
  with open(os.environ['SS_TEST_WIRE'],'a') as f:f.write(json.dumps(v)+'\n')
+if '--version' in sys.argv:print('1.4.12');sys.exit(0)
+if '-p' in sys.argv:
+ assert sys.argv[1:]==['-p','/usage','--output-format','json','--disable-slash-commands=false']
+ emit({'status':'SUCCESS','num_turns':0,'conversation_id':'','command':{'name':'usage','data':{'groups':[
+  {'name':'Gemini Models','buckets':[{'remaining_fraction':0.75,'window':'weekly','reset_time':'2026-11-11T02:24:22Z'}]},
+  {'name':'Claude and GPT models','buckets':[{'remaining_fraction':0.25,'window':'weekly','reset_time':'2026-11-11T02:24:22Z'}]}
+ ]}}});sys.exit(0)
 record({'args':sys.argv[1:],'cwd':os.getcwd(),'capability':os.environ.get('SUPERSURFER_AGENT_CAPABILITY'),'helper':os.environ.get('ANTIGRAVITY_HARNESS_PATH')})
 session='session-antigravity'
 options=[{'id':'model','category':'model','options':[{'value':'gemini-test','name':'Gemini test'}]}, {'id':'mode','category':'mode','options':[{'value':'default'},{'value':'yolo'}]}]
@@ -53,7 +60,7 @@ class AntigravityTests(unittest.TestCase):
         self.binary.chmod(0o700)
         (self.root / 'localharness_external').touch()
         self.log = self.root / 'wire'
-        self.env = patch.dict(os.environ, {'SUPERSURFER_ANTIGRAVITY': str(self.binary), 'SS_TEST_WIRE': str(self.log)})
+        self.env = patch.dict(os.environ, {'SUPERSURFER_ANTIGRAVITY': str(self.binary), 'SUPERSURFER_ANTIGRAVITY_CLI': str(self.binary), 'SS_TEST_WIRE': str(self.log)})
         self.env.start()
         self.bridge = self.make_bridge()
 

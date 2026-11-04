@@ -155,7 +155,26 @@ streaming, session resume, scoped SuperSurfer tools, Ask/YOLO and Stop are suppo
 Ask uses Antigravity's native default permissions, not a Codex filesystem sandbox;
 native reads/edits may be allowed by its own policy. YOLO answers native permission
 requests once without writing shared allow-always rules. Codex automatic approval
-review, Fast, effort controls, active-turn steering, structured edit attribution
-and account quota readings are not advertised. Usage appears only when the runtime
-emits supported ACP usage events. Sign-out stays in the native ACP client because
+review, Fast, effort controls, active-turn steering and structured edit attribution
+are not advertised. Session consumption appears only when the runtime emits
+supported ACP usage events; CLI remaining quota is described below. Sign-out stays in the native ACP client because
 credentials can be shared with other Google clients.
+
+
+### Antigravity remaining usage
+
+Settings → Coding backends → Google Antigravity → Usage & remaining quota reads
+fresh model quota from the separately installed `agy` CLI. Sign in to that CLI
+first. Stable CLI 1.x version 1.1.11 or newer is required; set
+`SUPERSURFER_ANTIGRAVITY_CLI` if `agy` is outside PATH / `~/.local/bin`.
+The native read-only command consumes no model quota and starts no conversation.
+
+Settings shows each model group's remaining percentage, reset time and observation
+source. The linked-provider sidebar shows Gemini and Claude/GPT groups separately.
+Refresh forces a new read; automatic UI reads share a 60-second cache. Failed reads
+show the previous observation as stale, or unavailable when none exists.
+
+These observations belong to the Google account signed into `agy` on the workspace
+host, which can differ from the ACP connection. Reading quota does not connect or
+change either account. Extra AI credits are a separate balance and are not inferred
+from the model quota. Session token/context counts are not remaining quota.

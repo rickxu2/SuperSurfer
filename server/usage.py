@@ -92,6 +92,49 @@ def claude_quota(result):
             "note": "Experimental provider interface; older CLIs, API-key accounts or missing profile access may not expose plan quota."}
 
 
+def antigravity_quota(result):
+    """Only native read-only /usage command data, never response text or tokens."""
+    windows = []
+    command = result.get("command") if isinstance(result, dict) else None
+    valid = (isinstance(command, dict) and command.get("name") in {"usage", "/usage"}
+             and result.get("status") == "SUCCESS" and type(result.get("num_turns")) is int
+             and result["num_turns"] == 0 and not result.get("conversation_id"))
+    data = command.get("data") if valid else None
+    groups = data.get("groups") if isinstance(data, dict) else None
+    if isinstance(groups, list):
+        for group in groups[:30]:
+            name = group.get("name") if isinstance(group, dict) else None
+            buckets = group.get("buckets") if isinstance(group, dict) else None
+            if not isinstance(name, str) or not 0 < len(name) <= 100 or any(ord(c) < 32 for c in name) or not isinstance(buckets, list):
+                continue
+            for bucket in buckets[:10]:
+                if not isinstance(bucket, dict):
+                    continue
+                fraction = number(bucket.get("remaining_fraction"))
+                if fraction is None or fraction > 1:
+                    continue
+                reset = None
+                try:
+                    parsed = datetime.fromisoformat(bucket["reset_time"].replace("Z", "+00:00"))
+                    if parsed.tzinfo is not None:
+                        reset = number(parsed.timestamp())
+                except (KeyError, AttributeError, ValueError, TypeError, OverflowError):
+                    pass
+                period = bucket.get("window")
+                period = period if period in {"weekly", "daily", "monthly", "five_hour"} else "quota"
+                windows.append({"label": name + " · " + period.replace("_", " "), "group": name,
+                                "remaining_percent": round(100 * fraction, 6), "resets_at": reset,
+                                "window_minutes": {"weekly": 10080, "daily": 1440, "five_hour": 300}.get(period)})
+                if len(windows) >= 30:
+                    break
+            if len(windows) >= 30:
+                break
+    return {"status": "available" if windows else "unavailable", "windows": windows,
+            "observed_at": time.time() if windows else None, "source": "Antigravity CLI read-only /usage",
+            "label": "CLI account quota", "grouped": True,
+            "note": "For the Google account signed into agy on this host; it can differ from the ACP account. Extra AI credit balance is separate."}
+
+
 def quota(result):
     """Normalize account quota snapshots; drop unknown fields and all credentials."""
     windows = []

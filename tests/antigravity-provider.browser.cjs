@@ -16,7 +16,16 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   await page.waitForFunction(()=>document.querySelector('[data-provider-account="antigravity"] .provider-account-status')?.textContent.includes('Google account connected'));
   assert.equal(await account.locator('[data-account-logout]').isVisible(),false);
   assert.equal(await page.locator('[name=backend_worker] option[value=antigravity]').count(),1);
-  await page.screenshot({path:'/tmp/antigravity-settings.png'});
+  await account.locator('summary').click();
+  await account.getByText('75% remaining · Gemini Models · weekly',{exact:false}).waitFor();
+  assert.match(await account.innerText(),/25% remaining.*Claude and GPT/);
+  assert.match(await account.innerText(),/CLI account quota/);
+  assert.match(await account.innerText(),/can differ from the ACP account/);
+  const quota=page.locator('[data-quota-provider="antigravity"]');
+  assert.match(await quota.innerText(),/75%.*25%/);
+  assert.match(await quota.getAttribute('aria-label'),/Gemini Models.*75%.*Claude and GPT models.*25%/);
+  assert.match(await quota.getAttribute('title'),/can differ from the ACP account/);
+  await page.screenshot({path:'/tmp/antigravity-cli-quota-settings.png'});
   await page.locator('[data-experiment="'+meta.experiment+'"]').first().click();
   const backend=page.getByLabel('Conversation backend');await backend.selectOption('antigravity');
   await page.waitForFunction(()=>document.querySelector('#chat-backend')?.value==='antigravity'&&!document.querySelector('#chat-send').disabled);
@@ -36,6 +45,6 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   await page.waitForFunction(()=>!document.querySelector('#chat-stop').disabled);await page.locator('#chat-stop').click();
   await page.waitForFunction(()=>!document.querySelector('#chat-send').disabled);
   await page.screenshot({path:'/tmp/antigravity-conversation.png'});
-  assert.deepEqual(errors,[]);console.log('PASS Antigravity Google connection, native model selection, streaming, approvals, stop, pinning and capability controls (offline ACP fixture)');
+  assert.deepEqual(errors,[]);console.log('PASS Antigravity CLI grouped quotas, source/account scope, sidebar, Google connection, model selection, streaming, approvals, stop and pinning (offline fixtures)');
  }finally{if(browser)await browser.close();fixture.stdin.end();await new Promise(resolve=>fixture.once('exit',resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1;});

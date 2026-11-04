@@ -6,13 +6,15 @@ export function linkedAccount(value){
 function windowsFor(quota){
  const windows=(quota?.windows||[]).filter(w=>Number.isFinite(w.remaining_percent)&&w.remaining_percent>=0&&w.remaining_percent<=100);
  const first=windows.find(w=>w.label==='codex · primary')||windows.find(w=>w.label==='five hour')||windows[0];
+ if(quota?.grouped)return [first,windows.find(w=>w.group!==first?.group)];
  const group=first?.label?.split(' · ')[0];
  const second=windows.find(w=>w!==first&&(w.label===`${group} · secondary`||w.label==='seven day'))||windows.find(w=>w!==first&&w.label?.split(' · ')[0]===group&&w.window_minutes!==first?.window_minutes);
  return [first,second];
 }
 function duration(window){
  const mins=window?.window_minutes;
- return mins?mins%1440===0?`${mins/1440}d`:mins%60===0?`${mins/60}h`:`${mins}m`:window?.label||'Quota window';
+ const period=mins?mins%1440===0?`${mins/1440}d`:mins%60===0?`${mins/60}h`:`${mins}m`:window?.label||'Quota window';
+ return window?.group?`${window.group} · ${period}`:period;
 }
 export function paintSidebarQuota(root,records,{refresh,openSettings,loading=false}={}){
  if(!root)return;
@@ -42,6 +44,7 @@ export function paintSidebarQuota(root,records,{refresh,openSettings,loading=fal
   if(!available){values.textContent='Unavailable';row.dataset.unavailable='true';}
   const note=stale?'Stale observation. ':'';
   row.title=`${labels[id]} · ${note}${details.join('\n')||quota?.note||'Quota unavailable'}${quota?.source?'\n'+quota.source:''}${quota?.observed_at?' · '+new Date(quota.observed_at*1000).toLocaleString():''}\nOpen usage details in Settings`;
+  if(quota?.grouped&&quota.note)row.title+='\n'+quota.note;
   row.ariaLabel=`${labels[id]} remaining quota. ${note}${details.join('. ')||'Unavailable'}. Open usage details.`;
   row.append(name,values,track);root.append(row);
  }

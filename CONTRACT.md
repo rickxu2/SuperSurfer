@@ -1,3 +1,28 @@
+# Antigravity CLI remaining quota
+
+The account endpoint reads `agy -p /usage --output-format json
+--disable-slash-commands=false` without an agent turn, session or OAuth. It first
+verifies a stable CLI 1.x version >=1.1.11; older/unrecognized versions never
+receive the slash command. Executable discovery uses PATH / ~/.local/bin, with
+`SUPERSURFER_ANTIGRAVITY_CLI` as an optional separate override from the ACP binary.
+The query runs in private service storage with stdin closed, scoped agent secrets
+removed, bounded timeouts and no raw stdout/stderr logging. Extra AI credits are
+separate from model quota; their absence is not a zero balance.
+
+Only successful native `command.data.groups[].buckets[]` responses with zero turns
+and no conversation ID are accepted. Known remaining fractions, group names and
+reset timestamps are normalized; model responses, token counts and unknown fields
+cannot become account quota. Each group is displayed independently in Settings;
+the sidebar pairs distinct model groups with group names in accessible details.
+Native CLI account scope is explicit and may differ from ACP authentication.
+Reading CLI metadata never connects/authenticates an ACP conversation.
+
+A provider-local lock coalesces refreshes. Observations cache for 60 seconds;
+explicit Refresh bypasses the cache. Failed refreshes retain prior values and
+original timestamps marked stale, or report unavailable when none exist. Account
+errors/sign-in state are separate from optional quota failures. No recurring agent
+work, provider fallback, token-file access or quota estimates are added.
+
 # Google Antigravity backend
 
 The `antigravity` provider launches Google's official `agy_acp_server.par` /
@@ -28,8 +53,9 @@ of the scoped SuperSurfer ask_user tool, whose actual-answer requirement persist
 under YOLO. Unknown client requests fail closed. Disconnects never trigger replay,
 model fallback or provider migration. Stops terminate only owned process groups.
 Fast, reasoning controls, steering, auto-review and structured edit attribution
-are not advertised. Native ACP usage updates are observed when supplied; generic
-remaining-account quota is explicitly unavailable. ACP used/size context occupancy
+are not advertised. Native ACP usage updates are observed when supplied; ACP
+account quota is not inferred from session usage. Separately installed Antigravity
+CLI quota is read through its native read-only JSON command (see below). ACP used/size context occupancy
 is not treated as tokens consumed or account quota. The runtime and its credentials
 are neither bundled nor copied. Remote browser/code relay is not implemented.
 

@@ -23,6 +23,7 @@ for name in ('codex','cursor','claude','opencode','antigravity'):
  binary=root/name;body=CODEX_FAKE if name=='codex' else CLI_FAKE.replace("text=='approval'","text.startswith('approval')").replace("text=='question'","text.startswith('question')").replace("text=='hold'","text.startswith('hold')").replace("text=v['message']['content'];","text=v['message']['content'].splitlines()[0];").replace("backend=os.environ['SS_TEST_PROVIDER'];",f"backend={name!r};")
  body=AGY_FAKE if name=='antigravity' else body
  binary.write_text('#!'+sys.executable+'\n'+body);binary.chmod(0o700);os.environ['SUPERSURFER_'+name.upper()]=str(binary)
+os.environ['SUPERSURFER_ANTIGRAVITY_CLI']=str(root/'antigravity')
 service=fixture.service;service.codex=BackendRouter(service.directory,service.store,service.context_provider,service._chat_scope,service.agent_action)
 server=create_server(service,port=0);threading.Thread(target=server.serve_forever,daemon=True).start()
 print(json.dumps({'port':server.server_port,'directory':str(service.directory),'project':'p1','experiment':fixture.exp['id']}),flush=True)

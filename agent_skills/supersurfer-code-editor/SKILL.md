@@ -410,9 +410,13 @@ native permissions; Ask is not a Codex filesystem sandbox, and native policy may
 allow workspace reads/edits. YOLO handles allow-once callbacks without granting
 shared allow-always rules. Use scoped ask_user and wait for real answers. Fast,
 reasoning controls, active-turn steering, automatic approval review, structured
-edit attribution and remaining account quota are not advertised. Usage is only
-observed native ACP data. Never infer quota from plan names or old Gemini CLI
-limits. Previous native-owner AutoML histories do not gain these tools. Installing
+edit attribution are not advertised. ACP usage observations do not establish
+remaining account quota. Settings can separately read the native agy CLI account
+quota through a version-guarded, zero-turn JSON /usage command; that account may
+differ from ACP sign-in. Model groups, timestamps and stale/unavailable reads are
+reported explicitly, with a 60-second cache and user-forced refresh. No credential
+files, agent inference or recurring work are used. Extra AI credits are
+separate. Never infer quota from plan names or old Gemini CLI limits. Previous native-owner AutoML histories do not gain these tools. Installing
 or connecting a provider does not authorize deployment, queue submission, recurring
 work or cross-project actions. Preparation, explicit queue requests and autonomous
 suggestions remain distinct.
