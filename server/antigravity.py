@@ -6,13 +6,19 @@ runtime/keychain; polling never reads tokens or silently opens a browser.
 from __future__ import annotations
 
 import copy
+import json
 import os
 from pathlib import Path
+import re
+import shutil
+import subprocess
 import sys
 import threading
+import time
 
 from .cli_backends import CliBridge, ProtocolProcess, executable
 from .conversations import BridgeError
+from . import usage
 
 
 class AntigravityBridge(CliBridge):
@@ -22,6 +28,9 @@ class AntigravityBridge(CliBridge):
         self._login_connection = None
         self._login_worker = None
         self._catalog = []
+        self._quota_lock = threading.Lock()
+        self._quota_cache = None
+        self._quota_checked = None
         super().__init__(*args, **kwargs)
 
     @staticmethod
@@ -122,6 +131,42 @@ class AntigravityBridge(CliBridge):
 
     def model_defaults(self, cwd=None):
         return {"model": "auto", "reasoning": None}
+
+    def quota(self, refresh=False):
+        """Read the CLI account's quota without OAuth or an agent/ACP prompt.
+
+        Version-gate BEFORE sending a slash command: CLI releases before 1.1.11
+        could pass print-mode slash commands to inference instead of handling them.
+        The observation belongs to agy's account, not an inferred ACP identity.
+        """
+        with self._quota_lock:
+            if not refresh and self._quota_checked is not None and time.monotonic() - self._quota_checked < 60:
+                return copy.deepcopy(self._quota_cache)
+            value = usage.antigravity_quota({})
+            try:
+                binary = os.environ.get("SUPERSURFER_ANTIGRAVITY_CLI") or shutil.which("agy") or str(Path.home() / ".local/bin/agy")
+                env = {k: v for k, v in os.environ.items() if not k.startswith("SUPERSURFER_AGENT_")}
+                version = subprocess.run([binary, "--version"], cwd=self.state_dir, env=env, stdin=subprocess.DEVNULL,
+                                         capture_output=True, text=True, timeout=5)
+                match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", version.stdout.strip()) if version.returncode == 0 else None
+                if not match or not (tuple(map(int, match.groups())) >= (1, 1, 11) and int(match[1]) == 1):
+                    raise ValueError("Unverified CLI version")
+                result = subprocess.run([binary, "-p", "/usage", "--output-format", "json", "--disable-slash-commands=false"], cwd=self.state_dir, env=env,
+                                        stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=20)
+                if result.returncode or len(result.stdout) > 1_000_000:
+                    raise ValueError("Quota unavailable")
+                value = usage.antigravity_quota(json.loads(result.stdout))
+                if value["status"] != "available":
+                    raise ValueError("Unsupported native quota response")
+            except (OSError, ValueError, TypeError, subprocess.TimeoutExpired):
+                note = "CLI quota could not be refreshed. Install Antigravity CLI 1.1.11+ (1.x) and sign in using agy, then refresh. No agent prompt or sign-in was started."
+                if self._quota_cache and self._quota_cache.get("windows"):
+                    value = {**copy.deepcopy(self._quota_cache), "stale": True, "note": note + " Showing the previous CLI-account observation; its account may differ from ACP."}
+                else:
+                    value["note"] = note
+            self._quota_cache = value
+            self._quota_checked = time.monotonic()
+            return copy.deepcopy(value)
 
     def configure_session(self, connection, session_id, session, model):
         choices = session.get("configOptions", [])

@@ -91,7 +91,7 @@ class CliBackendTests(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name).resolve();self.repo=self.root/'repo';self.repo.mkdir()
         self.binary=self.root/'provider';self.binary.write_text('#!'+sys.executable+'\n'+FAKE);self.binary.chmod(0o700)
         self.log=self.root/'wire.jsonl'
-        self.env=patch.dict(os.environ,{'SUPERSURFER_CURSOR':str(self.binary),'SUPERSURFER_CLAUDE':str(self.binary),'SUPERSURFER_OPENCODE':str(self.binary),'SS_TEST_WIRE':str(self.log),'SS_TEST_PROVIDER':'claude'})
+        self.env=patch.dict(os.environ,{'SUPERSURFER_CURSOR':str(self.binary),'SUPERSURFER_CLAUDE':str(self.binary),'SUPERSURFER_OPENCODE':str(self.binary),'SUPERSURFER_ANTIGRAVITY_CLI':str(self.root/'no-native-agy'),'SS_TEST_WIRE':str(self.log),'SS_TEST_PROVIDER':'claude'})
         self.env.start();self.bridges=[]
     def tearDown(self):
         for bridge in self.bridges:bridge.close()

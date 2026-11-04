@@ -23,6 +23,18 @@ class ProviderServiceTests(unittest.TestCase):
         self.fixture.tearDown();self.cli.tearDown()
     def select(self):
         return self.service.action('chat.settings',{'scope':self.scope,'backend':'claude','model':None,'reasoning':None,'fast_mode':None,'approval_mode':None})
+    def test_antigravity_cli_quota_is_separate_from_acp_signin(self):
+        from test_antigravity_quota import report
+        from server import usage
+        bridge = self.service.codex.provider('antigravity')
+        with patch.object(bridge, 'account', return_value={'installed': True, 'login_required': True, 'account': None}), \
+             patch.object(bridge, 'quota', return_value=usage.antigravity_quota(report())) as quota:
+            result = self.service.codex.account('antigravity', refresh=True)
+        quota.assert_called_once_with(refresh=True)
+        self.assertTrue(result['login_required'])
+        self.assertIsNone(result['account'])
+        self.assertEqual([75, 0], [row['remaining_percent'] for row in result['usage']['quota']['windows']])
+        self.assertIn('can differ', result['usage']['quota']['note'])
     def test_select_backend_without_chatgpt_then_pin_after_send(self):
         self.assertEqual('claude',self.select()['preferences']['backend']);self.assertEqual('claude',self.service.chat(self.scope)['backend']);self.service.state()
         self.service.action('chat.send',{'scope':self.scope,'text':'hello'});self.cli.wait(lambda:not self.service.codex.chat(self.scope)['busy'])
@@ -50,7 +62,7 @@ class ProviderServiceTests(unittest.TestCase):
         binary = self.cli.root / 'agy_acp_server.par'
         binary.write_text('#!' + sys.executable + '\n' + FAKE)
         binary.chmod(0o700)
-        with patch.dict(os.environ, {'SUPERSURFER_ANTIGRAVITY': str(binary)}):
+        with patch.dict(os.environ, {'SUPERSURFER_ANTIGRAVITY': str(binary), 'SUPERSURFER_ANTIGRAVITY_CLI': str(binary)}):
             account = self.service.codex.account('antigravity')
             self.assertTrue(account['installed'])
             self.assertTrue(account['login_required'])

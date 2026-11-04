@@ -1,3 +1,50 @@
+# Antigravity CLI remaining quota — November 3, 2026
+
+Native remaining model quota is now connected to Settings and the linked-provider
+sidebar through the separate `agy` CLI's read-only JSON /usage command. The parser
+accepts only command metadata with zero turns and no conversation ID, not model
+text, tokens or context occupancy. CLI version verification and explicit
+`--disable-slash-commands=false` precede the query; no OAuth, ACP prompt or fallback
+inference is started. Each model group has a remaining percentage, reset timestamp
+and provenance. CLI account scope can differ from ACP and is shown explicitly.
+A 60-second cache and forced refresh preserve honest stale/unavailable observations.
+Extra AI credit balance is separate and not inferred.
+
+Verified on macOS arm64, Python 3.13.17 / Node 22.22.0 / rsync 3.4.1:
+
+- Final `npm test`: 791 Python tests OK (34 skipped); 55 Node tests,
+  50 passed / 5 skipped / zero failed.
+- Six focused quota tests pass: normalization/zero/reset/sanitization, rejection
+  of token/model replies, version gates before dispatch, fixed zero-input command,
+  isolated working directory, caching/forced refresh, failed refresh retention and
+  malformed/timeout responses. Eleven backend routing tests pass, including quota
+  available from CLI without falsely authenticating ACP.
+- Antigravity browser fixture passes grouped Settings and sidebar percentages,
+  provenance/account scope, source links and existing backend interactions.
+  Existing sidebar regression passes zero/unknown/expired/stale values, unlink/link,
+  navigation, accessible labels and light/dark responsive layouts. Screenshot
+  `tests/reports/antigravity-cli-quota-settings.png` is synthetic fixture evidence,
+  visually inspected; it is not the user's live account.
+- Real installed CLI 1.4.12 through the new adapter returned native weekly Gemini
+  and Claude/GPT quota at 100% each with reset timestamps. The adapter remained
+  unauthenticated to ACP with no active connection. No inference or model credits
+  used. Native /credits returned unavailable for this account; no zero inferred.
+- `python3 scripts/check-agent-skills.py` and `git diff --check` pass.
+- `npm run package:mac` passes. Development app and ZIP are under
+  `/Users/richardxu/Code/supersurfer-antigravity-cli-quota/dist/`.
+- `node tests/mac-package.electron.cjs` passes strict signatures, setup readiness,
+  isolated-profile launches and renderer sandbox checks for original and
+  ZIP-extracted bundles; separate strict codesign verification passes. Local
+  ad-hoc signature only, not Developer ID/notarization or downloaded Gatekeeper proof.
+
+The managed Checks action remains unconfigured and could not start; no managed
+passed receipt is claimed. No other worktree's interrupted prototype was changed.
+The branch starts from merged main d0e05a2; installed service baseline b38374ef9416124e
+matches baseline server/UI source, preserving the Files fix and Antigravity backend.
+Local activation is authorized by the updated root AGENTS.md but must wait for
+other active agent turns and unsaved-work checks. Activation evidence will be
+recorded in the work-item task/handoff receipt, not inferred from packaging.
+
 # Google Antigravity backend — November 3, 2026
 
 Implemented a distinct `antigravity` provider using Google's official ACP runtime,
