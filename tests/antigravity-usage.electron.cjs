@@ -9,9 +9,10 @@ const {install}=require('./fixtures/workspace-demo.cjs');
  fs.writeFileSync(main,"const {app,BrowserWindow}=require('electron');app.whenReady().then(()=>{const window=new BrowserWindow({width:1280,height:900,webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}});window.loadURL('about:blank');});");
  let application;
  try{
-  application=await electron.launch({args:[main,`--user-data-dir=${path.join(temporary,'profile')}`],chromiumSandbox:true});
+  const delivered=process.env.SUPERSURFER_PACKAGED_EXECUTABLE;
+  application=await electron.launch({...(delivered?{executablePath:delivered}:{}),args:[...(delivered?[]:[main]),`--user-data-dir=${path.join(temporary,'profile')}`],chromiumSandbox:true});
   const page=await application.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await install(page,{tab:'overview'});
+  await install(page,{tab:'overview',...(delivered?{uiRoot:path.resolve(delivered,'../../Resources/app/ui')}:{})});
   let unavailable=false,units=false;
   const now=Date.now()/1000;
   await page.route('http://demo.test/api/account*',route=>{
