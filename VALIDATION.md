@@ -29,7 +29,16 @@ closed. Context occupancy and session token totals remain separate.
   `062e4b40e2be60e6a156ccaadd2817ea2b2ed11df1bc250b52bae1095be92661`.
   Signing is local/ad-hoc, not Developer ID/notarization; downloaded Gatekeeper
   acceptance is not claimed. No Chrome was launched.
-- Live activation remains pending a safe idle window; no other task was interrupted.
+- Authorized local activation verified November 4 after fresh idle/draft checks.
+  Installed desktop and service both use archive/release `062e4b40e2be60e6`.
+  Original workspace/profile/window identity and conversations were retained;
+  the previously installed paused-status fix remains present. SQLite/preferences
+  and the prior app were backed up. The research engine was not restarted.
+  Native cached Google reconnect completed, and the actual account endpoint plus
+  visible sidebar/Settings reported real quota groups, reset times and provenance.
+  A temporarily stale renderer view was recovered using the saved connection;
+  the temporary verification window was closed and original window restored.
+  No Chrome, credential inspection, model inference, merge or release was used.
 - Surfboard `checks` was attempted through `run_board_action`; the block has no
   command configured and returned an error. No board check/preview pass is claimed.
 
