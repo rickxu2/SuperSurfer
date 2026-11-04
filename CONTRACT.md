@@ -13,7 +13,8 @@ Only explicit `account.login` starts personal Google OAuth through native ACP
 or reads token files. Sign-in is asynchronous and retry-safe while pending, with
 sanitized failure messages. Verification is held for the workspace service's
 lifetime; restarting requires explicit reconnection of Google's cached identity.
-Setup creates a private no-prompt/no-MCP session for advertised model selectors.
+Setup creates a private no-model/no-MCP session for advertised model selectors.
+On verified ACP 1.4.5 this connection is retained for native quota reads.
 Account access and model eligibility remain native runtime decisions, not promises
 that every plan has every model. No API-key billing fallback is performed. Shared
 credential sign-out is unavailable in SuperSurfer; use a native ACP client.
@@ -28,9 +29,15 @@ of the scoped SuperSurfer ask_user tool, whose actual-answer requirement persist
 under YOLO. Unknown client requests fail closed. Disconnects never trigger replay,
 model fallback or provider migration. Stops terminate only owned process groups.
 Fast, reasoning controls, steering, auto-review and structured edit attribution
-are not advertised. Native ACP usage updates are observed when supplied; generic
-remaining-account quota is explicitly unavailable. ACP used/size context occupancy
-is not treated as tokens consumed or account quota. The runtime and its credentials
+are not advertised. Native ACP usage updates are observed when supplied; remaining
+account quota is read by the verified 1.4.5 built-in `/usage`, gated on its advertisement for
+the exact private session. The command is intercepted before model execution.
+Reads time out after 15 seconds, cache for 60 seconds per connection, deny all
+client tool requests, never reconnect/authenticate/replay on polling, and discard
+a failed channel. Explicit reconnect clears prior quota. Unknown runtimes or
+unavailable native quotas stay unavailable. Only native Quota Limits are parsed;
+whole-percent and minute-resolution resets are reported with observation/source.
+ACP used/size context occupancy is not treated as tokens consumed or account quota. The runtime and its credentials
 are neither bundled nor copied. Remote browser/code relay is not implemented.
 
 # Files sidebar navigation

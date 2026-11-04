@@ -156,6 +156,9 @@ Ask uses Antigravity's native default permissions, not a Codex filesystem sandbo
 native reads/edits may be allowed by its own policy. YOLO answers native permission
 requests once without writing shared allow-always rules. Codex automatic approval
 review, Fast, effort controls, active-turn steering, structured edit attribution
-and account quota readings are not advertised. Usage appears only when the runtime
-emits supported ACP usage events. Sign-out stays in the native ACP client because
+are not advertised. Remaining account quota is available through the verified
+ACP 1.4.5 built-in `/usage` after Connect, cached for 60 seconds. Unknown versions
+or failed reads show Unavailable. Native percentages are rounded to integers and
+reset times to minutes; context occupancy is separate. Other usage appears only
+when the runtime emits supported ACP usage events. Sign-out stays in the native ACP client because
 credentials can be shared with other Google clients.

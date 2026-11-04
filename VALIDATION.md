@@ -1,3 +1,26 @@
+# Antigravity remaining quota (November 4, 2026)
+
+Verified native ACP 1.4.5 `/usage` interception before agent execution and observed
+real consumer quota/reset text. See [native evidence](tests/reports/antigravity-native-usage.md)
+for binary/source hashes, wire scope, precision and limitations. The source
+integration retains the private explicit-login session, with a 15-second read
+bound, 60-second connection-local cache, no polling auth/session creation and
+no uncertain replay. Unknown versions, missing commands and native errors fail
+closed. Context occupancy and session token totals remain separate.
+
+- 15 isolated Antigravity wire tests passed, including timeout, execution denial,
+  unsupported runtime, cache reset on reconnect and no replay.
+- Isolated Electron usage check passed without Chrome: both model groups, zero,
+  units, source/reset details, precision note, separate tokens and unavailable replacement.
+- Agent capability-skill validation and `git diff --check` passed.
+- `npm test`: 792 Python tests OK (34 skipped), Node 50 passed/5 skipped.
+  One earlier attempt hit the existing Codex timeout fixture's 150ms initialize
+  deadline while Electron was active; the serial rerun passed. Provider tests
+  are isolated fixtures, not authenticated inference checks.
+- Mac package/activation evidence is recorded separately when complete.
+- Surfboard `checks` was attempted through `run_board_action`; the block has no
+  command configured and returned an error. No board check/preview pass is claimed.
+
 # Google Antigravity backend — November 3, 2026
 
 Implemented a distinct `antigravity` provider using Google's official ACP runtime,

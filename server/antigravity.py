@@ -10,6 +10,9 @@ import os
 from pathlib import Path
 import sys
 import threading
+import time
+
+from . import usage
 
 from .cli_backends import CliBridge, ProtocolProcess, executable
 from .conversations import BridgeError
@@ -21,6 +24,9 @@ class AntigravityBridge(CliBridge):
         self._login = {"status": "idle"}
         self._login_connection = None
         self._login_worker = None
+        self._quota_channel = None
+        self._quota_cache = None
+        self._quota_checked = 0
         self._catalog = []
         super().__init__(*args, **kwargs)
 
@@ -71,13 +77,36 @@ class AntigravityBridge(CliBridge):
 
     def _connect(self, binary):
         connection = None
+        retained = False
+        channel = {"commands": threading.Event(), "commands_session": None, "session": None, "messages": [], "reading": False, "unsafe": False}
+        with self._account_lock:
+            previous = self._login_connection
+            self._quota_channel = None
+            self._quota_cache = None
+            self._quota_checked = 0
+        if previous:
+            previous.close()
         try:
             args, env = self.runtime_command(binary, os.environ)
             # This private setup session has no project context, MCP tools or
             # model prompts. It reads the runtime's advertised model selectors.
             def event(value, source):
                 if "method" in value and "id" in value:
+                    channel["unsafe"] = True
                     source.respond(value["id"], "Setup does not authorize tool execution.", error=True)
+                update = value.get("params", {}).get("update", {})
+                if update.get("sessionUpdate") == "available_commands_update":
+                    if any(item.get("name") == "usage" for item in update.get("availableCommands", [])):
+                        channel["commands_session"] = value.get("params", {}).get("sessionId")
+                        channel["commands"].set()
+                if (channel["reading"] and value.get("params", {}).get("sessionId") == channel["session"]
+                        and update.get("sessionUpdate") == "agent_message_chunk"):
+                    content = update.get("content", {})
+                    if content.get("type") == "text" and isinstance(content.get("text"), str):
+                        if len(channel["messages"]) < 200 and sum(map(len, channel["messages"])) + len(content["text"]) <= 32000:
+                            channel["messages"].append(content["text"])
+                        else:
+                            channel["unsafe"] = True
             connection = ProtocolProcess(args, str(self.state_dir), env, event)
             with self._account_lock:
                 if self._closed:
@@ -88,21 +117,67 @@ class AntigravityBridge(CliBridge):
             self.authenticate(connection, init)
             session = connection.call("session/new", {"cwd": str(self.state_dir), "mcpServers": []})
             catalog = self.session_models(session)
+            channel["session"] = session.get("sessionId")
+            # 1.4.5's bundled server.py intercepts exact /usage before agent
+            # execution. Unknown builds fail closed even if they advertise it.
+            verified = init.get("agentInfo", {}) == {"name": "antigravity-acp", "title": "Google Antigravity", "version": "1.4.5"}
+            supported = (verified and channel["commands"].wait(2) and isinstance(channel["session"], str)
+                         and channel["commands_session"] == channel["session"] and not channel["unsafe"])
             with self._account_lock:
                 if not self._closed:
                     self._authenticated = True
                     self._catalog = catalog
                     self._login = {"status": "completed"}
+                    if supported:
+                        self._quota_channel = channel
+                        retained = True
         except Exception:
             with self._account_lock:
                 self._authenticated = False
                 self._login = {"status": "failed", "error": "Antigravity sign-in could not be verified. Check its official ACP installation and finish Google sign-in on the workspace host, then reconnect. No model prompt was sent."}
         finally:
-            if connection:
+            if connection and not retained:
                 connection.close()
             with self._account_lock:
-                self._login_connection = None
+                if not retained:
+                    self._login_connection = None
                 self._account_cache = None
+
+    def quota(self):
+        """Read only the proven built-in command on the explicit login session.
+
+        Never creates/reloads a conversation, authenticates, replays an uncertain command,
+        attaches tools or falls back to a model. A failed channel needs Connect.
+        The 60-second cache belongs to this connection, never to a plan or email.
+        """
+        unavailable = usage.antigravity_quota("")
+        with self._account_lock:
+            channel, connection = self._quota_channel, self._login_connection
+            if (not self._authenticated or self._login.get("status") != "completed"
+                    or not channel or not connection or connection.proc.poll() is not None):
+                return {**unavailable, "note": "Connect Google account to enable quota on the verified Antigravity ACP 1.4.5 runtime. Usage refresh never starts sign-in."}
+            if self._quota_cache is not None and time.monotonic() - self._quota_checked < 60:
+                return copy.deepcopy(self._quota_cache)
+            channel["messages"] = []
+            channel["reading"] = True
+            try:
+                result = connection.call("session/prompt", {"sessionId": channel["session"],
+                                         "prompt": [{"type": "text", "text": "/usage"}]}, timeout=15)
+                if channel["unsafe"] or result.get("stopReason") != "end_turn":
+                    raise BridgeError("Native usage did not finish safely.")
+                quota = usage.antigravity_quota("".join(channel["messages"]))
+            except (BridgeError, OSError, ValueError, TypeError):
+                # Discard a failed channel so late chunks can never contaminate
+                # another read. There is no automatic reconnect or replay.
+                connection.close()
+                self._quota_channel = None
+                quota = {**unavailable, "note": "Native quota read failed. Reconnect Google account to retry; no command was replayed."}
+            finally:
+                channel["reading"] = False
+                channel["messages"] = []
+            self._quota_cache = quota
+            self._quota_checked = time.monotonic()
+            return copy.deepcopy(quota)
 
     @staticmethod
     def session_models(session):

@@ -6,8 +6,10 @@
   uncertain disconnects; native no-inference handshake checked in an empty profile.
 - [ ] Authenticated Google Free/Pro/Ultra inference and remote-host browser login
   require a user-authenticated native runtime; not claimed by offline fixtures.
-- [ ] Native remaining-quota reads, shared credential logout and separate effort
-  picker are not implemented; supported ACP cost events can be observed.
+- [x] Native remaining-quota reads through verified ACP 1.4.5 built-in `/usage`,
+  with bounded private reads, cache, reset/source observations and unavailable states.
+- [ ] Shared credential logout and separate effort picker are not implemented;
+  supported ACP cost events can be observed.
 
 # Project selection Files fix
 

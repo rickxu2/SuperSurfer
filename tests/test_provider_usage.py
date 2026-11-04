@@ -35,6 +35,26 @@ class UsageTests(unittest.TestCase):
         self.assertFalse(any(x.get('type') == 'user' for x in records))
         self.assertEqual('unavailable', usage.claude_quota({'rate_limits_available': False})['status'])
 
+    def test_antigravity_parses_only_native_quota_section_and_preserves_zero(self):
+        report = ("### Session Usage\n- **Session total:** 123,456 tokens\n"
+                  "- **Bogus:** 99% remaining\n\n### Quota Limits\n"
+                  "- **Gemini Models**\n  - **Weekly:** 0% remaining (resets Nov 11, 2026, 02:31 UTC)\n"
+                  "- **Other models**\n  - **Weekly:** 100% remaining\n"
+                  "  - **Requests:** 1,234 units remaining\n"
+                  "  - **Disabled:** Disabled\n  - **Broken:** 101% remaining\n"
+                  "  - **Unknown:** Available\n  - **Negative:** -1% remaining")
+        data = usage.antigravity_quota(report)
+        self.assertEqual([0, 100, None], [w.get('remaining_percent') for w in data['windows']])
+        self.assertEqual(1234, data['windows'][2]['remaining_units'])
+        self.assertEqual(1794364260, data['windows'][0]['resets_at'])
+        self.assertIsNone(data['windows'][1]['resets_at'])
+        for report in (None, {}, '', '### Session Usage\n- **Session total:** 0 tokens',
+                       '### Quota Limits\n- Unable to retrieve quota status (SECRET)', 'x'*32001):
+            data = usage.antigravity_quota(report)
+            self.assertEqual('unavailable', data['status'])
+            self.assertIsNone(data['observed_at'])
+            self.assertNotIn('SECRET', json.dumps(data))
+
     def test_account_tokens_are_allowlisted_zero_is_known_and_not_host_consumption(self):
         self.assertIsNone(usage.account_tokens({}))
         value = usage.account_tokens({'summary': {'lifetimeTokens': 0, 'secret': 'NEVER_PUBLISH'}})

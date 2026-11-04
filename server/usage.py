@@ -4,8 +4,9 @@ Consumption covers observed SuperSurfer sessions on this host (across logins),
 not an account's complete bill. Cumulative samples replace themselves on replay.
 """
 import math
+import re
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def number(value):
@@ -126,3 +127,46 @@ def quota(result):
     return {"windows": windows, "observed_at": time.time() if windows else None,
             "source": "Codex account/rateLimits/read", "status": "available" if windows else "unavailable",
             "note": None if windows else "This account or CLI did not report account quota windows."}
+
+
+def antigravity_quota(report):
+    """Parse only 1.4.5's native Quota Limits section, never session tokens.
+
+    The native text rounds percentages to integers and reset times to minutes. Do not
+    claim precision it did not expose or copy arbitrary error/account text.
+    """
+    windows = []
+    group = None
+    section = report.partition("### Quota Limits\n")[2] if isinstance(report, str) and len(report) <= 32000 else ""
+    for line in section.splitlines()[:200]:
+        heading = re.fullmatch(r"- \*\*([^*\r\n]{1,100})\*\*", line)
+        if heading:
+            group = heading[1]
+            continue
+        bucket = re.fullmatch(r"  - \*\*([^*\r\n]{1,100}):\*\* ([0-9]{1,3})% remaining(?: \(resets ([A-Z][a-z]{2} [0-9]{2}, [0-9]{4}, [0-9]{2}:[0-9]{2} UTC)\))?", line)
+        amount = re.fullmatch(r"  - \*\*([^*\r\n]{1,100}):\*\* ([0-9,]{1,24}) units remaining(?: \(resets ([A-Z][a-z]{2} [0-9]{2}, [0-9]{4}, [0-9]{2}:[0-9]{2} UTC)\))?", line)
+        match = bucket or amount
+        if not group or not match:
+            continue
+        try:
+            value = int(match[2].replace(",", ""))
+        except ValueError:
+            continue
+        if number(value) is None or (bucket and value > 100):
+            continue
+        reset = None
+        if match[3]:
+            try:
+                reset = number(datetime.strptime(match[3], "%b %d, %Y, %H:%M UTC").replace(tzinfo=timezone.utc).timestamp())
+            except ValueError:
+                pass
+        windows.append({"label": group + " · " + match[1],
+                        "remaining_percent" if bucket else "remaining_units": value,
+                        "window_minutes": None, "resets_at": reset})
+        if len(windows) == 30:
+            break
+    return {"status": "available" if windows else "unavailable", "windows": windows,
+            "observed_at": time.time() if windows else None,
+            "source": "Antigravity ACP 1.4.5 built-in /usage",
+            "note": "Native report rounds percentages to integers and reset times to minutes." if windows else
+                    "Native quota is unavailable; session/context usage is not remaining account quota."}
