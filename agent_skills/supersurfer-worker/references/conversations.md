@@ -183,10 +183,14 @@ A Cursor initialization/authentication failure before session creation sends no
 model prompt. Follow the host CLI update/sign-in guidance; preserve the request
 and existing session rather than changing providers or replaying uncertain work.
 
-Settings → Coding backends shows Codex, Cursor and Claude status, refresh, official
+Settings → Coding backends shows provider status, refresh, official
 sign-in and sign-out. The service refuses account changes while any turn on that
 provider is active; finish or deliberately stop it first, not another provider's
-work. Sign-out invokes the official CLI and retains histories, provider bindings
+work. Antigravity uses advertised native ACP logout on its retained personal
+Google connection; other native clients sharing that login can also be signed
+out. A dead connection requires explicit Reconnect before Sign out. Unknown
+logout delivery is not retried or reported as success. Other providers use their
+official CLI. Sign-out retains histories, provider bindings
 and task/run identities. If external host configuration still supplies credentials,
 a completed CLI sign-out can remain connected; report that actual status without
 deleting account files or environment settings. These are authenticated user GUI

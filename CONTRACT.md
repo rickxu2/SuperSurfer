@@ -14,10 +14,17 @@ or reads token files. Sign-in is asynchronous and retry-safe while pending, with
 sanitized failure messages. Verification is held for the workspace service's
 lifetime; restarting requires explicit reconnection of Google's cached identity.
 Setup creates a private no-model/no-MCP session for advertised model selectors.
-On verified ACP 1.4.5 this connection is retained for native quota reads.
+This connection is retained for advertised native logout and, on verified ACP
+1.4.5, native quota reads.
 Account access and model eligibility remain native runtime decisions, not promises
-that every plan has every model. No API-key billing fallback is performed. Shared
-credential sign-out is unavailable in SuperSurfer; use a native ACP client.
+that every plan has every model. No API-key billing fallback is performed. Settings Sign out invokes only advertised ACP `logout` on the existing personal
+OAuth connection, bounded to 15 seconds. The native runtime owns credential
+removal; other Antigravity clients sharing this login may also be signed out.
+Account changes reject active provider turns and pending sign-in. A dead channel
+requires explicit Reconnect, never silent authentication or a fresh logout
+process. Success clears account verification, catalog and quota but preserves
+chat/session identities and consumption. Uncertain delivery clears observations,
+closes the channel and reports failure without retry or model/CLI fallback.
 
 Each turn owns an ACP process, exact session ID and scoped MCP servers. Resumes
 suppress native historical replay and fail closed if loadSession is unsupported.

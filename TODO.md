@@ -8,8 +8,10 @@
   require a user-authenticated native runtime; not claimed by offline fixtures.
 - [x] Native remaining-quota reads through verified ACP 1.4.5 built-in `/usage`,
   with bounded private reads, cache, reset/source observations and unavailable states.
-- [ ] Shared credential logout and separate effort picker are not implemented;
-  supported ACP cost events can be observed.
+- [x] Advertised native ACP logout and subsequent sign-in in Settings, with idle
+  guards, shared-login notice, explicit reconnect and uncertain-delivery handling.
+- [ ] Separate effort picker is not implemented; supported ACP cost events can
+  be observed.
 
 # Project selection Files fix
 

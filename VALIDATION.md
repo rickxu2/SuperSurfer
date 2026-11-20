@@ -1,3 +1,41 @@
+# Antigravity account controls (November 19, 2026)
+
+Settings now exposes advertised native ACP logout, subsequent Google sign-in and
+explicit Reconnect for a dead native connection. Saved chats and native session
+IDs remain. Logout invalidates account/catalog/quota observations, is bounded to
+15 seconds and never retried after uncertain delivery. Native credential removal
+may affect other Antigravity clients sharing the login; the UI discloses this.
+
+- Native initialize-only ACP 1.4.5 probe advertised `auth.logout: {}`. Reviewed
+  bundled source establishes direct native logout and active-auth-flavor cleanup.
+  See [redacted native evidence](tests/reports/antigravity-native-logout.md).
+- 22 Antigravity wire tests and 11 provider routing tests passed, covering actual
+  logout RPC dispatch, missing capability, stale connection, pending login,
+  timeout/error/crash without replay, read-only/active-turn guards, retained
+  histories and sign-in/resume after logout.
+- Isolated Electron Settings regression passed: Sign out → Sign in, shared-login
+  notice, active-turn disabled state and explicit Reconnect. No Chrome or live
+  Google logout, model inference or credential inspection was used.
+- `npm test`: 800 Python tests OK (34 skipped); Node 50 passed/5 skipped.
+- Agent capability-skill validation and `git diff --check` passed.
+- Combined local source `67a18d0` preserves installed quota and paused-status
+  fix e6a6145; 803 Python tests OK (34 skipped), Node 50 passed/5 skipped.
+- Darwin arm64 `npm run package:mac` passed. Build and ZIP are in
+  `../supersurfer-antigravity-account-local/dist/`. Original and ZIP-extracted
+  apps passed strict signature, isolated launch and sandbox checks; the exact
+  delivered app passed the Electron account-controls regression. Local/ad-hoc
+  signing only; no notarization or downloaded Gatekeeper acceptance claim.
+  Workspace archive SHA256:
+  `c19694c530d28ff894ac52e0cb9ca58f228074897ccea65b75aa43ff6ff7a5f7`.
+- Authorized local activation verified: desktop PID7652, matching service7650,
+  release `c19694c530d28ff8`, original window/profile and histories preserved;
+  engine54249 unchanged. Native cached Google reconnect completed. Actual Settings
+  shows enabled Sign out with shared-client notice; live quota still available.
+  Real Google Sign out was not clicked for QA. See
+  [reviewed activation evidence](tests/reports/antigravity-account-activation.md).
+- Board check cannot run: the applied checks block has no configured argv.
+  No managed-check or preview success is claimed.
+
 # Antigravity remaining quota (November 4, 2026)
 
 Verified native ACP 1.4.5 `/usage` interception before agent execution and observed

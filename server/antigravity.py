@@ -21,6 +21,7 @@ from .conversations import BridgeError
 class AntigravityBridge(CliBridge):
     def __init__(self, *args, **kwargs):
         self._authenticated = False
+        self._logout_supported = False
         self._login = {"status": "idle"}
         self._login_connection = None
         self._login_worker = None
@@ -54,11 +55,16 @@ class AntigravityBridge(CliBridge):
             return {"backend": self.backend, "installed": False, "account": None,
                     "login_required": True, "logout_supported": False,
                     "error": str(exc) + " Antigravity needs agy_acp_server.par and its matching localharness_external helper, not just agy."}
+        connection = self._login_connection
+        reconnect = self._authenticated and (not connection or connection.closed or connection.proc.poll() is not None)
         return {"backend": self.backend, "installed": True,
                 "account": {"type": self.backend, "authMethod": "oauth-personal"} if self._authenticated else None,
-                "login_required": not self._authenticated, "logout_supported": False,
+                "login_required": not self._authenticated, "logout_supported": self._logout_supported,
+                "reconnect_required": reconnect,
+                "logout_note": "Signs out the native Google account on this machine; other Antigravity clients sharing this login may also be signed out.",
                 "login": copy.deepcopy(self._login), "error": self._login.get("error"),
-                "note": ("Google account connected. Model access follows your Antigravity plan."
+                "note": ("Reconnect Google account to restore its native connection before signing out." if reconnect else
+                         "Google account connected. Sign out may also sign out other Antigravity clients sharing this login."
                          if self._authenticated else
                          "Connect to verify Google's cached sign-in, or finish sign-in in the workspace host's browser. Reconnect after a workspace service restart.")}
 
@@ -84,6 +90,7 @@ class AntigravityBridge(CliBridge):
             self._quota_channel = None
             self._quota_cache = None
             self._quota_checked = 0
+            self._logout_supported = False
         if previous:
             previous.close()
         try:
@@ -114,6 +121,8 @@ class AntigravityBridge(CliBridge):
                 self._login_connection = connection
             init = connection.call("initialize", {"protocolVersion": 1, "clientCapabilities": {},
                                                    "clientInfo": {"name": "supersurfer", "version": "1"}})
+            auth = init.get("agentCapabilities", {}).get("auth", {})
+            native_logout = isinstance(auth, dict) and isinstance(auth.get("logout"), dict)
             self.authenticate(connection, init)
             session = connection.call("session/new", {"cwd": str(self.state_dir), "mcpServers": []})
             catalog = self.session_models(session)
@@ -128,9 +137,12 @@ class AntigravityBridge(CliBridge):
                     self._authenticated = True
                     self._catalog = catalog
                     self._login = {"status": "completed"}
+                    self._logout_supported = native_logout
                     if supported:
                         self._quota_channel = channel
-                        retained = True
+                    # Keep the explicit personal-OAuth connection for native
+                    # logout even when this runtime's quota format is unknown.
+                    retained = supported or native_logout
         except Exception:
             with self._account_lock:
                 self._authenticated = False
@@ -215,8 +227,49 @@ class AntigravityBridge(CliBridge):
             selector = next(item for item in choices if item.get("category") == "model" or item.get("id") == "model")
             connection.call("session/set_config_option", {"sessionId": session_id, "configId": selector["id"], "value": model})
 
+    def _clear_account_observations(self):
+        # Keep durable chat/session identities and host consumption unchanged.
+        self._authenticated = False
+        self._catalog = []
+        self._account_cache = None
+        self._quota_channel = None
+        self._quota_cache = None
+        self._quota_checked = 0
+
     def logout(self):
-        raise BridgeError("Antigravity credentials belong to its native ACP runtime. Sign out in a supported Antigravity ACP client; SuperSurfer does not delete shared Google credentials.", 409)
+        """Use the advertised native method; never delete credential files.
+
+        A dead connection must be explicitly reconnected first, so sign-out
+        cannot authenticate silently or infer a different client's auth flavor.
+        Uncertain delivery is never replayed and never reported as success.
+        The router serializes account actions and rejects active agent turns.
+        """
+        with self._account_lock:
+            if self._closed:
+                raise BridgeError("The workspace is closing; reconnect before signing out.")
+            if self._login.get("status") == "working" and self._login_worker and self._login_worker.is_alive():
+                raise BridgeError("Finish Google sign-in before signing out.", 409)
+            if not self._logout_supported:
+                raise BridgeError("This Antigravity runtime has not advertised native sign-out. Connect Google account using a runtime that supports ACP logout.", 409)
+            connection = self._login_connection
+            if not connection or connection.closed or connection.proc.poll() is not None:
+                self._account_cache = None
+                raise BridgeError("Reconnect Google account before signing out; its native connection is no longer available.", 409)
+            try:
+                result = connection.call("logout", {}, timeout=15)
+                if not isinstance(result, dict):
+                    raise BridgeError("Invalid native sign-out response.")
+            except (BridgeError, OSError, ValueError, TypeError) as error:
+                self._clear_account_observations()
+                self._login = {"status": "failed", "error": "Google sign-out could not be confirmed. Reconnect to verify the account state; no request was replayed."}
+                raise BridgeError(self._login["error"]) from error
+            else:
+                self._clear_account_observations()
+                self._login = {"status": "idle"}
+            finally:
+                connection.close()
+                self._login_connection = None
+        return {"backend": self.backend, "logout_completed": True}
 
     def close(self):
         with self._account_lock:
