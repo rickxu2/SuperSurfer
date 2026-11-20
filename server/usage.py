@@ -129,8 +129,8 @@ def quota(result):
             "note": None if windows else "This account or CLI did not report account quota windows."}
 
 
-def antigravity_quota(report):
-    """Parse only 1.4.5's native Quota Limits section, never session tokens.
+def antigravity_quota(report, version="1.4.5"):
+    """Parse only reviewed 1.4.5/1.5.0 native Quota Limits section, never session tokens.
 
     The native text rounds percentages to integers and reset times to minutes. Do not
     claim precision it did not expose or copy arbitrary error/account text.
@@ -167,6 +167,6 @@ def antigravity_quota(report):
             break
     return {"status": "available" if windows else "unavailable", "windows": windows,
             "observed_at": time.time() if windows else None,
-            "source": "Antigravity ACP 1.4.5 built-in /usage",
+            "source": "Antigravity ACP " + version + " built-in /usage",
             "note": "Native report rounds percentages to integers and reset times to minutes." if windows else
                     "Native quota is unavailable; session/context usage is not remaining account quota."}

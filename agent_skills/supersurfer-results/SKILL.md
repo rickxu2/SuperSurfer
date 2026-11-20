@@ -282,7 +282,7 @@ allow workspace reads/edits. YOLO handles allow-once callbacks without granting
 shared allow-always rules. Use scoped ask_user and wait for real answers. Fast,
 reasoning controls, active-turn steering, automatic approval review, structured
 edit attribution are not advertised. Remaining account quota is read through the
-verified ACP 1.4.5 built-in `/usage` on the private Google connection, cached for
+reviewed ACP 1.4.5/1.5.0 built-in `/usage` on the private Google connection, cached for
 60 seconds. Unknown runtimes or failed reads show Unavailable; refresh never
 starts sign-in. Native percentages are rounded to integers and reset times to
 minutes. Context occupancy/session tokens are separate from account quota. Never
@@ -290,3 +290,20 @@ infer quota from plan names or old Gemini CLI limits. Previous native-owner Auto
 or connecting a provider does not authorize deployment, queue submission, recurring
 work or cross-project actions. Preparation, explicit queue requests and autonomous
 suggestions remain distinct.
+
+
+## Provider runtime maintenance
+
+Settings → Coding backends has an explicit runtime-update check and an opt-in
+six-hour automatic schedule while the workspace service runs. Updates use official
+advertised CLI commands or checksum-verified managed Antigravity ACP registry
+artifacts; no model prompt, OAuth or credential inspection. Active provider turns
+and sign-in defer maintenance, missing tools are not installed, and explicit
+runtime overrides remain pinned. Native installation/channel policies can prevent
+an update; report its actual status rather than forcing another package manager.
+Updated Google runtimes can need explicit Reconnect. Model access still depends
+on the provider's advertised account catalog, plan and rollout; never promise a
+model from its release announcement alone. Agent-panel choices offer connected
+accounts only; pinned conversations retain their provider, even when unavailable.
+These are user GUI controls, not new role tools or authorization for remote-host
+updates, deployment, queueing, recurring agent work or account changes.

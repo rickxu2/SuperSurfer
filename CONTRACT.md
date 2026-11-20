@@ -1,3 +1,33 @@
+# Provider runtime maintenance and connected choices
+
+Workspace provider updates are explicit GUI configuration/actions, not agent MCP
+capabilities. Opt-in is saved per workspace. The existing service monitor ticks a
+six-hour update schedule independently of run-monitoring enablement. Disabling
+stops future automatic checks; shutdown stops scheduling. A currently running
+native installer is allowed to finish its bounded operation. Busy providers retry
+on the next idle minute; recently checked providers retain their six-hour bound.
+No agent turn or model inference is scheduled for maintenance.
+
+Installed providers only: Codex/Claude/Cursor use advertised `update`, OpenCode
+uses advertised `upgrade`; no shell, project cwd, sudo, guessed package-manager
+fallback or raw installer logs. Overrides are pinned. Native installers retain
+vendor policy. Failures/uncertain timeout are explicit, without immediate replay.
+Managed Antigravity ACP is fetched from the official registry/dl.google.com,
+bounded and SHA256-verified, extracts only the fixed runtime/helper pair, checks
+native identity without authentication/session creation, then atomically switches
+its known symlink. Prior versions remain on disk. Custom launchers are preserved.
+Read-only workspaces cannot configure or run updates. Per-provider account locks
+exclude sends/login/logout during maintenance; active turns and pending sign-in
+are never interrupted. Verified changes retire only the idle owned bridge and
+invalidate catalogs; saved conversation/session bindings and credentials remain.
+The next Google connection uses explicit native Reconnect. Remaining quota is
+supported only on reviewed ACP1.4.5/1.5.0; future formats fail closed.
+
+New selectable agent backends require verified connected account state. Missing,
+signed-out, uncertain or reconnect-required providers stay in Settings for setup.
+An existing conversation's disabled bound-provider indicator is retained and never
+silently reassigned. New manual-agent choices use the same connected filter.
+
 # Google Antigravity backend
 
 The `antigravity` provider launches Google's official `agy_acp_server.par` /
@@ -37,7 +67,7 @@ under YOLO. Unknown client requests fail closed. Disconnects never trigger repla
 model fallback or provider migration. Stops terminate only owned process groups.
 Fast, reasoning controls, steering, auto-review and structured edit attribution
 are not advertised. Native ACP usage updates are observed when supplied; remaining
-account quota is read by the verified 1.4.5 built-in `/usage`, gated on its advertisement for
+account quota is read by the reviewed 1.4.5/1.5.0 built-in `/usage`, gated on its advertisement for
 the exact private session. The command is intercepted before model execution.
 Reads time out after 15 seconds, cache for 60 seconds per connection, deny all
 client tool requests, never reconnect/authenticate/replay on polling, and discard

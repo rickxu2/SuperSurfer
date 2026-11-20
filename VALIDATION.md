@@ -1,3 +1,38 @@
+# Provider runtime updates and connected choices (November 19, 2026)
+
+- Official native update commands were checked against vendor documentation and
+  installed help. Antigravity registry1.5.0 archive checksum verified; isolated
+  initialize-only probe confirms native identity and logout. Bundled source proves
+  built-in `/usage` interception before inference and identical quota formatting.
+  See [reviewed sources/hashes](tests/reports/provider-runtime-update-sources.md).
+- Eleven updater tests pass: persisted opt-in/six-hour schedule, busy-minute deferral,
+  per-provider retry bounds, fixed advertised native commands for all four CLIs,
+  pinned/missing tools, read-only protection, sanitized failure/no immediate replay,
+  checksum failure preserving launcher and identity-before-atomic pair activation.
+- 23 Antigravity tests pass, including1.5.0 quota source;12 provider routing tests
+  cover maintenance-action validation/read-only and correct Codex adapter reopen.
+- Full suite:813 Python tests OK (34 skipped), Node51 passed/5 skipped.
+- Combined local source03ad670 preserves installed quota/account controls and
+  paused-status fixe6a6145:816 Python tests OK34skip;Node51passed5skip.
+- Darwin arm64 package passed original/ZIP-extracted strict signatures, isolated
+  launches and renderer sandbox checks. Delivered Electron maintenance/picker,
+  account-control and quota regressions pass. Build/archive are in
+  `../supersurfer-provider-runtime-local/dist/`. Local/ad-hoc signing only; no
+  notarization/downloaded Gatekeeper claim. Workspace archive SHA256:
+  `004c6a2abbcb57078aa6b3775230250eac80bbf4e9719201e3791522f4456529`.
+- Authorized local activation verified: exact installed/service release
+  `004c6a2abbcb5707`, original profile/window/histories and engine retained.
+  Maintenance enabled; next20Nov04:09:58EST. Actual updates:Codex0.171.0,
+  ACP1.5.0,Claude2.1.329; missing tools skipped. Native Settings and provider menu
+  verified; no agent created. Codex now advertises GPT6.2Sol/Astra. Google native
+  catalog still advertises only3.8Flash, independently confirmed without inference.
+  See [reviewed live evidence](tests/reports/provider-runtime-activation.md).
+- Agent capability-skill and diff checks pass. Surfboard checks were attempted but
+  argv is unconfigured; no managed-check or preview success is claimed.
+- Isolated Electron regression checks connected-only empty-conversation choices,
+  account-state changes, auto-update opt-in, explicit check action/status and a
+  refreshed synthetic model catalog. No native updater/auth/inference in this UI fixture.
+
 # Antigravity account controls (November 19, 2026)
 
 Settings now exposes advertised native ACP logout, subsequent Google sign-in and

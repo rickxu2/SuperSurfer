@@ -32,8 +32,11 @@ class BackendRouter:
         backend = provider_name(backend)
         with self.lock:
             if backend not in self.bridges:
-                adapter = {"opencode": OpenCodeBridge, "antigravity": AntigravityBridge}.get(backend, CliBridge)
-                self.bridges[backend] = adapter(backend, self.directory / backend, self.context_provider, self.action_handler)
+                if backend == "codex":
+                    self.bridges[backend] = CodexBridge(self.directory / backend, self.context_provider, self.action_handler)
+                else:
+                    adapter = {"opencode": OpenCodeBridge, "antigravity": AntigravityBridge}.get(backend, CliBridge)
+                    self.bridges[backend] = adapter(backend, self.directory / backend, self.context_provider, self.action_handler)
             return self.bridges[backend]
 
     def backend_for(self, scope):

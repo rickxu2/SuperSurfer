@@ -214,6 +214,8 @@ class Service(SurfboardService, EditorService, WritingService):
             from .backends import BackendRouter
             codex = BackendRouter(self.directory, self.store, self.context_provider, self._chat_scope, action_handler=self.agent_action)
         self.codex = codex
+        from .provider_updates import ProviderUpdates
+        self.provider_updates = ProviderUpdates(self)
         from .native_sessions import NativeSessions
         self.native_sessions = NativeSessions(self)
         self.shutdown = threading.Event()
@@ -340,6 +342,7 @@ class Service(SurfboardService, EditorService, WritingService):
         while not self.shutdown.wait(1):
             if not self.read_only:
                 try:
+                    self.provider_updates.tick()
                     self.check_reviews()
                 except Exception as exc:
                     self.store.put("review_scheduler_error", str(exc))
@@ -1783,6 +1786,14 @@ class Service(SurfboardService, EditorService, WritingService):
                 raise APIError("Previous AutoML agents are read-only. Open their history without selecting them for new work.", 409)
             self.store.select_conversation(experiment_id, scope)
             return self.experiment_agents(experiment_id)
+        if op in {"provider.updates.configure", "provider.updates.check"}:
+            if op == "provider.updates.configure":
+                if set(params) != {"enabled"}:
+                    raise APIError("Runtime update configuration accepts only enabled.")
+                return self.provider_updates.configure(params["enabled"])
+            if params:
+                raise APIError("Runtime update checks accept no commands, paths or credentials.")
+            return self.provider_updates.start(force=True)
         if op == "account.login":
             if set(params) - {"backend"}:
                 raise APIError("Login accepts only the backend name; never send credentials or codes.")
@@ -2046,6 +2057,7 @@ class Service(SurfboardService, EditorService, WritingService):
             self.tracking_thread.join(timeout=20)
         if self.monitor_thread:
             self.monitor_thread.join(timeout=30)
+        self.provider_updates.close()
         self.nodes.close()
         self.workbench.close()
         self.latex.close()
@@ -2053,7 +2065,7 @@ class Service(SurfboardService, EditorService, WritingService):
         self.codex.close()
         # A bounded external call may still be unwinding on process shutdown.
         # Do not close SQLite underneath a live background writer.
-        threads = (self.wakeup_thread, self.tracking_thread, self.monitor_thread, self.message_thread, *self.nodes.threads)
+        threads = (self.wakeup_thread, self.tracking_thread, self.monitor_thread, self.message_thread, self.provider_updates.thread, *self.nodes.threads)
         if not any(thread and thread.is_alive() for thread in threads):
             self.store.close()
 
@@ -2291,13 +2303,15 @@ class Handler(BaseHTTPRequestHandler):
                     if not run:
                         raise APIError("Run not found", 404)
                     result = telemetry.run_metrics(self.server.service.wandb, run, snapshot)
+                elif path == "/api/provider-updates":
+                    result = self.server.service.provider_updates.status()
                 elif path == "/api/account":
                     backend = query.get("backend", ["codex"])[0]
                     from .cli_backends import provider_name
                     provider_name(backend)
                     result = self.server.service.codex.account(backend=backend, refresh=query.get("refresh", [""])[0] == "1") if hasattr(self.server.service.codex, "backend_for") else self.server.service.codex.account()
                 elif path == "/api/models":
-                    result = self.server.service.models(backend=query.get("backend", ["codex"])[0])
+                    result = self.server.service.models(refresh=query.get("refresh", [""])[0] == "1", backend=query.get("backend", ["codex"])[0])
                 elif path == "/api/directories":
                     result = directory_suggestions(query.get("path", [""])[0])
                 else:
