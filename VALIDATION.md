@@ -20,6 +20,13 @@
   `../supersurfer-provider-runtime-local/dist/`. Local/ad-hoc signing only; no
   notarization/downloaded Gatekeeper claim. Workspace archive SHA256:
   `004c6a2abbcb57078aa6b3775230250eac80bbf4e9719201e3791522f4456529`.
+- Authorized local activation verified: exact installed/service release
+  `004c6a2abbcb5707`, original profile/window/histories and engine retained.
+  Maintenance enabled; next20Nov04:09:58EST. Actual updates:Codex0.171.0,
+  ACP1.5.0,Claude2.1.329; missing tools skipped. Native Settings and provider menu
+  verified; no agent created. Codex now advertises GPT6.2Sol/Astra. Google native
+  catalog still advertises only3.8Flash, independently confirmed without inference.
+  See [reviewed live evidence](tests/reports/provider-runtime-activation.md).
 - Agent capability-skill and diff checks pass. Surfboard checks were attempted but
   argv is unconfigured; no managed-check or preview success is claimed.
 - Isolated Electron regression checks connected-only empty-conversation choices,
