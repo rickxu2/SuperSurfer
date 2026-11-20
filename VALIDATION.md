@@ -1,3 +1,23 @@
+# Provider runtime updates and connected choices (November 19, 2026)
+
+- Official native update commands were checked against vendor documentation and
+  installed help. Antigravity registry1.5.0 archive checksum verified; isolated
+  initialize-only probe confirms native identity and logout. Bundled source proves
+  built-in `/usage` interception before inference and identical quota formatting.
+  See [reviewed sources/hashes](tests/reports/provider-runtime-update-sources.md).
+- Ten updater tests pass: persisted opt-in/six-hour schedule, busy-minute deferral,
+  per-provider retry bounds, fixed advertised native commands for all four CLIs,
+  pinned/missing tools, read-only protection, sanitized failure/no immediate replay,
+  checksum failure preserving launcher and identity-before-atomic pair activation.
+- 23 Antigravity tests pass, including1.5.0 quota source;12 provider routing tests
+  cover maintenance-action validation/read-only and correct Codex adapter reopen.
+- Full suite:812 Python tests OK (34 skipped), Node51 passed/5 skipped.
+- Agent capability-skill and diff checks pass. Surfboard checks were attempted but
+  argv is unconfigured; no managed-check or preview success is claimed.
+- Isolated Electron regression checks connected-only empty-conversation choices,
+  account-state changes, auto-update opt-in, explicit check action/status and a
+  refreshed synthetic model catalog. No native updater/auth/inference in this UI fixture.
+
 # Antigravity account controls (November 19, 2026)
 
 Settings now exposes advertised native ACP logout, subsequent Google sign-in and

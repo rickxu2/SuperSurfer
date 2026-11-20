@@ -165,3 +165,20 @@ and Sign in when the ACP runtime advertises logout. Sign-out can also affect oth
 Antigravity clients sharing this Google login. Finish active turns first. If the
 native connection has ended, explicitly Reconnect before signing out. Saved chats
 and their provider/session identities are retained.
+
+## Provider runtime updates
+
+Settings → Coding backends offers **Check & update now** and an optional
+**Automatically update installed provider runtimes when idle** setting. Automatic
+checks run every six hours while the workspace service is running. Active turns
+or sign-in defer that provider; missing tools are not installed. Explicit runtime
+paths and custom Antigravity installations remain managed by their owner.
+
+Codex, Claude Code, Cursor and OpenCode use their advertised official update
+commands and installation/channel policies. Managed Antigravity ACP uses the
+checksum-verified official registry server/helper pair with atomic launcher
+replacement. Updates never log in, change account credentials or send a model
+prompt. Model catalogs refresh afterward; Google may require explicit Reconnect.
+Newly released models still depend on the provider's account eligibility and
+rollout. The agent-panel picker offers only verified signed-in providers; existing
+conversations keep their original provider identity even if it needs reconnecting.

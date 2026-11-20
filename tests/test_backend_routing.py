@@ -23,6 +23,21 @@ class ProviderServiceTests(unittest.TestCase):
         self.fixture.tearDown();self.cli.tearDown()
     def select(self):
         return self.service.action('chat.settings',{'scope':self.scope,'backend':'claude','model':None,'reasoning':None,'fast_mode':None,'approval_mode':None})
+    def test_runtime_update_actions_and_codex_reopen_keep_native_adapter(self):
+        from server.codex import CodexBridge
+        with self.assertRaises(ValueError):
+            self.service.action('provider.updates.configure', {'enabled':True,'command':'arbitrary'})
+        with self.assertRaises(ValueError):
+            self.service.action('provider.updates.check', {'backend':'codex'})
+        self.assertFalse(self.service.action('provider.updates.configure', {'enabled':False})['enabled'])
+        self.service.read_only=True
+        with self.assertRaises((ValueError,BridgeError)):
+            self.service.action('provider.updates.configure', {'enabled':True})
+        self.service.read_only=False
+        old=self.service.codex.provider('codex');old.close()
+        self.service.codex.bridges.pop('codex')
+        self.assertIsInstance(self.service.codex.provider('codex'),CodexBridge)
+
     def test_select_backend_without_chatgpt_then_pin_after_send(self):
         self.assertEqual('claude',self.select()['preferences']['backend']);self.assertEqual('claude',self.service.chat(self.scope)['backend']);self.service.state()
         self.service.action('chat.send',{'scope':self.scope,'text':'hello'});self.cli.wait(lambda:not self.service.codex.chat(self.scope)['busy'])

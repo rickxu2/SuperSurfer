@@ -127,9 +127,10 @@ class AntigravityBridge(CliBridge):
             session = connection.call("session/new", {"cwd": str(self.state_dir), "mcpServers": []})
             catalog = self.session_models(session)
             channel["session"] = session.get("sessionId")
-            # 1.4.5's bundled server.py intercepts exact /usage before agent
+            channel["version"] = init.get("agentInfo", {}).get("version")
+            # Reviewed 1.4.5/1.5.0 bundled server.py intercepts exact /usage before agent
             # execution. Unknown builds fail closed even if they advertise it.
-            verified = init.get("agentInfo", {}) == {"name": "antigravity-acp", "title": "Google Antigravity", "version": "1.4.5"}
+            verified = init.get("agentInfo", {}) == {"name": "antigravity-acp", "title": "Google Antigravity", "version": init.get("agentInfo", {}).get("version")} and init.get("agentInfo", {}).get("version") in {"1.4.5", "1.5.0"}
             supported = (verified and channel["commands"].wait(2) and isinstance(channel["session"], str)
                          and channel["commands_session"] == channel["session"] and not channel["unsafe"])
             with self._account_lock:
@@ -167,7 +168,7 @@ class AntigravityBridge(CliBridge):
             channel, connection = self._quota_channel, self._login_connection
             if (not self._authenticated or self._login.get("status") != "completed"
                     or not channel or not connection or connection.proc.poll() is not None):
-                return {**unavailable, "note": "Connect Google account to enable quota on the verified Antigravity ACP 1.4.5 runtime. Usage refresh never starts sign-in."}
+                return {**unavailable, "note": "Connect Google account to enable quota on the reviewed Antigravity ACP runtime. Usage refresh never starts sign-in."}
             if self._quota_cache is not None and time.monotonic() - self._quota_checked < 60:
                 return copy.deepcopy(self._quota_cache)
             channel["messages"] = []
@@ -177,7 +178,7 @@ class AntigravityBridge(CliBridge):
                                          "prompt": [{"type": "text", "text": "/usage"}]}, timeout=15)
                 if channel["unsafe"] or result.get("stopReason") != "end_turn":
                     raise BridgeError("Native usage did not finish safely.")
-                quota = usage.antigravity_quota("".join(channel["messages"]))
+                quota = usage.antigravity_quota("".join(channel["messages"]), version=channel["version"])
             except (BridgeError, OSError, ValueError, TypeError):
                 # Discard a failed channel so late chunks can never contaminate
                 # another read. There is no automatic reconnect or replay.

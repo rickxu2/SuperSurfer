@@ -99,6 +99,14 @@ class AntigravityTests(unittest.TestCase):
         self.wait(lambda: not self.bridge.chat('manager')['busy'])
         return self.bridge.chat('manager')
 
+    def test_reviewed_150_quota_uses_native_version_source(self):
+        with patch.dict(os.environ, {'SS_AGY_VERSION': '1.5.0'}):
+            self.bridge.login()
+            self.wait(lambda: self.bridge.account(refresh=True).get('login', {}).get('status') == 'completed')
+            quota = self.bridge.quota()
+            self.assertEqual(quota['status'], 'available')
+            self.assertEqual(quota['source'], 'Antigravity ACP 1.5.0 built-in /usage')
+
     def test_polling_never_starts_oauth_and_send_requires_explicit_connection(self):
         for _ in range(2):
             self.assertTrue(self.bridge.account(refresh=True)['login_required'])

@@ -1,3 +1,12 @@
+# Provider runtime maintenance
+
+- [x] Opt-in six-hour idle-only official CLI/runtime updates, explicit check/status,
+  pinned-path/missing-tool protection and bounded failure without model inference.
+- [x] Official managed ACP registry checksum/identity validation and atomic pair
+  activation; reviewed1.5.0 quota support, retaining unknown-format fail-closed gate.
+- [x] Fresh model catalogs after update; connected-only agent/provider picker with
+  pinned conversation identity preserved.
+
 # Google Antigravity (source build)
 
 - [x] Official ACP provider, Google personal-account connection, advertised model
