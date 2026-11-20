@@ -117,6 +117,47 @@ class ProviderServiceTests(unittest.TestCase):
             self.assertGreaterEqual(len(after['messages']),len(before['messages']))
             self.assertEqual('claude',self.service.codex.backend_for(self.scope))
 
+    def test_antigravity_logout_is_native_idle_only_and_preserves_routing(self):
+        from test_antigravity import FAKE
+        import sys
+        binary = self.cli.root / 'agy_acp_server.par'
+        binary.write_text('#!' + sys.executable + '\n' + FAKE)
+        binary.chmod(0o700)
+        with patch.dict(os.environ, {'SUPERSURFER_ANTIGRAVITY': str(binary)}):
+            self.service.action('account.login', {'backend': 'antigravity'})
+            self.cli.wait(lambda: not self.service.codex.account('antigravity', refresh=True)['login_required'])
+            self.service.action('chat.settings', {'scope': self.scope, 'backend': 'antigravity'})
+            self.service.action('chat.send', {'scope': self.scope, 'text': 'hello'})
+            self.cli.wait(lambda: not self.service.chat(self.scope)['busy'])
+            before = self.service.chat(self.scope)
+            self.service.action('chat.send', {'scope': self.scope, 'text': 'hold'})
+            self.cli.wait(lambda: self.service.chat(self.scope)['status'] == 'working')
+            for operation in ('account.logout', 'account.login'):
+                with self.assertRaises(BridgeError):
+                    self.service.action(operation, {'backend': 'antigravity'})
+            self.assertTrue(self.service.chat(self.scope)['busy'])
+            self.service.action('chat.stop', {'scope': self.scope})
+            self.cli.wait(lambda: not self.service.chat(self.scope)['busy'])
+            for extra in ('token', 'command', 'path'):
+                with self.assertRaises(ValueError):
+                    self.service.action('account.logout', {'backend': 'antigravity', extra: 'untrusted'})
+            self.service.read_only = True
+            with self.assertRaises(ValueError):
+                self.service.action('account.logout', {'backend': 'antigravity'})
+            self.service.read_only = False
+            result = self.service.action('account.logout', {'backend': 'antigravity'})
+            self.assertTrue(result['logout_completed'])
+            self.assertTrue(result['login_required'])
+            self.assertIsNone(result['account'])
+            self.assertEqual('unavailable', result['usage']['quota']['status'])
+            after = self.service.chat(self.scope)
+            self.assertEqual(before['thread_id'], after['thread_id'])
+            self.assertGreaterEqual(len(after['messages']), len(before['messages']))
+            self.assertEqual('antigravity', self.service.codex.backend_for(self.scope))
+            self.service.action('account.login', {'backend': 'antigravity'})
+            self.cli.wait(lambda: not self.service.codex.account('antigravity', refresh=True)['login_required'])
+            self.assertEqual(before['thread_id'], self.service.chat(self.scope)['thread_id'])
+
     def test_missing_codex_has_structured_install_status_without_starting_process(self):
         with patch.dict(os.environ,{'SUPERSURFER_CODEX':str(self.cli.root/'not-installed')}):
             result=self.service.codex.account('codex')

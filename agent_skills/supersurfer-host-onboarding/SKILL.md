@@ -270,6 +270,11 @@ CLI. Its scoped SuperSurfer tools retain this role's ownership and Surfboard
 limits. Only an explicit Connect Google account action starts personal Google
 OAuth; polling does not open a browser. Credentials stay native, with no API-key
 fallback or token collection in chat. Reconnect after a workspace service restart.
+Settings supports advertised native ACP Sign out and subsequent Sign in. Native
+logout can affect other Antigravity clients sharing the Google login. Finish this
+provider's active turns first; reconnect a dead native channel explicitly before
+signing out. Saved conversations remain. Uncertain logout is reported as failure
+and never replayed. Do not delete credential files or send logout as a model prompt.
 The host needs the official ACP executable and matching helper; remote sign-in
 must finish through the native runtime's host browser. Do not promise browser/code
 relay. A missing executable or sign-in is setup to diagnose, not evidence that

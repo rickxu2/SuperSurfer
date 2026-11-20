@@ -160,5 +160,8 @@ are not advertised. Remaining account quota is available through the verified
 ACP 1.4.5 built-in `/usage` after Connect, cached for 60 seconds. Unknown versions
 or failed reads show Unavailable. Native percentages are rounded to integers and
 reset times to minutes; context occupancy is separate. Other usage appears only
-when the runtime emits supported ACP usage events. Sign-out stays in the native ACP client because
-credentials can be shared with other Google clients.
+when the runtime emits supported ACP usage events. Settings supports native Sign out
+and Sign in when the ACP runtime advertises logout. Sign-out can also affect other
+Antigravity clients sharing this Google login. Finish active turns first. If the
+native connection has ended, explicitly Reconnect before signing out. Saved chats
+and their provider/session identities are retained.

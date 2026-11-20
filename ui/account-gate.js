@@ -9,7 +9,7 @@ export function createAccountGate({api,action,onAccount,readOnly,getBackend=()=>
  const status=dialog.querySelector('#account-gate-status'),code=dialog.querySelector('#account-gate-code'),signIn=dialog.querySelector('#account-sign-in'),check=dialog.querySelector('#account-check'),title=dialog.querySelector('h2'),select=dialog.querySelector('select'),command=dialog.querySelector('pre'),use=dialog.querySelector('#account-use'),install=dialog.querySelector('#account-install'),installHelp=dialog.querySelector('#account-install-help'),installCursor=dialog.querySelector('#account-install-cursor');
  const accounts=new Map(),checks=new Map(),graceMs=15000;let checking=false,checkingBackend=null,checkingEpoch=-1,starting=false,pending=null,timer,forced=false,dismissed=false,selected=getBackend(),waitingSince=Date.now(),generation=0,terminalCommand='',setupMode=false,actionError='';
  const desired=()=>labels[getBackend()]?getBackend():'codex';
- const connected=backend=>{const account=accounts.get(backend);return !!account?.account&&!account.error&&account.login_required!==true&&account.account.type===(backend==='codex'?'chatgpt':backend);};
+ const connected=backend=>{const account=accounts.get(backend);return !!account?.account&&!account.error&&!account.reconnect_required&&account.login_required!==true&&account.account.type===(backend==='codex'?'chatgpt':backend);};
  const ready=()=>readOnly()||!getSetupRequired()&&connected(desired());
  const waiting=()=>!ready()&&waitingSince!==null&&Date.now()-waitingSince<graceMs;
  const hint=()=>ready()?'':getSetupRequired()?'Choose a provider for this machine.':accounts.get(desired())?.error||`Connect ${titles[desired()]} to send messages.`;

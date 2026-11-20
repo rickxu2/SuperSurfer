@@ -25,13 +25,16 @@ current=None
 for line in sys.stdin:
  v=json.loads(line);record(v);m=v.get('method');p=v.get('params',{});key=v.get('id')
  if m=='initialize':
-  emit({'jsonrpc':'2.0','id':key,'result':{'protocolVersion':1,'agentInfo':{'name':'antigravity-acp','title':'Google Antigravity','version':os.environ.get('SS_AGY_VERSION','1.4.5')},'agentCapabilities':{'loadSession':not os.environ.get('SS_AGY_NO_RESUME')},'authMethods':[{'id':'oauth-personal'}]}})
+  emit({'jsonrpc':'2.0','id':key,'result':{'protocolVersion':1,'agentInfo':{'name':'antigravity-acp','title':'Google Antigravity','version':os.environ.get('SS_AGY_VERSION','1.4.5')},'agentCapabilities':{'loadSession':not os.environ.get('SS_AGY_NO_RESUME'),'auth':{} if os.environ.get('SS_AGY_NO_LOGOUT') else {'logout':{}}},'authMethods':[{'id':'oauth-personal'}]}})
  elif m=='authenticate':
   emit({'jsonrpc':'2.0','id':key,**({'error':{'code':-32000,'message':'NEVER_EXPOSE_TOKEN'}} if os.environ.get('SS_AGY_FAIL_AUTH') else {'result':{}})})
  elif m in ('session/new','session/load'):
   if m=='session/load':emit({'jsonrpc':'2.0','method':'session/update','params':{'sessionId':session,'update':{'sessionUpdate':'agent_message_chunk','content':{'type':'text','text':'HISTORICAL_REPLAY'}}}})
   emit({'jsonrpc':'2.0','id':key,'result':{'sessionId':'foreign-session' if m=='session/load' and os.environ.get('SS_AGY_WRONG_SESSION') else session,'configOptions':options[:1] if os.environ.get('SS_AGY_NO_MODE') else options}})
   if not os.environ.get('SS_AGY_NO_USAGE'):emit({'jsonrpc':'2.0','method':'session/update','params':{'sessionId':session,'update':{'sessionUpdate':'available_commands_update','availableCommands':[{'name':'usage'}]}}})
+ elif m=='logout':
+  if os.environ.get('SS_AGY_LOGOUT_CRASH'):os._exit(2)
+  emit({'jsonrpc':'2.0','id':key,**({'error':{'code':-32000,'message':'NEVER_EXPOSE_TOKEN'}} if os.environ.get('SS_AGY_LOGOUT_ERROR') else {'result':{}})})
  elif m=='session/set_config_option':emit({'jsonrpc':'2.0','id':key,'result':{}})
  elif m=='session/prompt':
   current=key;text=p['prompt'][0]['text'].split('User request:\n')[-1].splitlines()[0]
@@ -115,9 +118,7 @@ class AntigravityTests(unittest.TestCase):
         self.assertEqual(str(self.root / 'state'), setup['cwd'])
         self.assertEqual([], setup['mcpServers'])
         self.assertEqual(['auto', 'gemini-test'], [row['id'] for row in self.bridge.models()['models']])
-        self.assertFalse(self.bridge.account()['logout_supported'])
-        with self.assertRaises(BridgeError):
-            self.bridge.logout()
+        self.assertTrue(self.bridge.account()['logout_supported'])
 
     def test_quota_uses_only_builtin_on_private_connection_and_caches(self):
         self.assertEqual('unavailable', self.bridge.quota()['status'])
@@ -186,6 +187,94 @@ class AntigravityTests(unittest.TestCase):
         self.assertIsNot(first, self.bridge._login_connection)
         self.assertIsNotNone(first.proc.poll())
         self.assertEqual('unavailable', self.bridge.quota()['status'])
+
+    def test_native_logout_preserves_chats_clears_quota_and_allows_signin_again(self):
+        self.connect()
+        before = self.send()
+        self.assertEqual('available', self.bridge.quota()['status'])
+        offset = len(self.wire())
+        self.assertTrue(self.bridge.logout()['logout_completed'])
+        self.assertEqual(['logout'], [r.get('method') for r in self.wire()[offset:]])
+        self.assertEqual({}, self.wire()[-1]['params'])
+        account = self.bridge.account()
+        self.assertTrue(account['login_required'])
+        self.assertIsNone(account['account'])
+        self.assertEqual('unavailable', self.bridge.quota()['status'])
+        self.assertEqual(['auto'], [m['id'] for m in self.bridge.models()['models']])
+        self.assertEqual(before['thread_id'], self.bridge.chat('manager')['thread_id'])
+        self.assertEqual(before['messages'], self.bridge.chat('manager')['messages'])
+        with self.assertRaises(BridgeError):
+            self.bridge.send('manager', 'must not infer after logout')
+        self.connect()
+        self.assertFalse(self.bridge.account()['login_required'])
+        after = self.send()
+        self.assertEqual(before['thread_id'], after['thread_id'])
+
+    def test_logout_capability_is_independent_of_verified_quota_version(self):
+        with patch.dict(os.environ, {'SS_AGY_VERSION': '1.4.6'}):
+            self.connect()
+        self.assertEqual('unavailable', self.bridge.quota()['status'])
+        self.assertTrue(self.bridge.account()['logout_supported'])
+        self.assertTrue(self.bridge.logout()['logout_completed'])
+
+    def test_missing_logout_capability_never_dispatches_or_removes_account(self):
+        with patch.dict(os.environ, {'SS_AGY_NO_LOGOUT': '1'}):
+            self.connect()
+        self.assertFalse(self.bridge.account()['logout_supported'])
+        offset = len(self.wire())
+        with self.assertRaises(BridgeError):
+            self.bridge.logout()
+        self.assertFalse(self.bridge.account()['login_required'])
+        self.assertEqual(offset, len(self.wire()))
+
+    def test_dead_connection_requires_explicit_reconnect_without_native_requests(self):
+        self.connect()
+        self.bridge._login_connection.close()
+        offset = len(self.wire())
+        self.assertTrue(self.bridge.account(refresh=True)['reconnect_required'])
+        with self.assertRaisesRegex(BridgeError, 'Reconnect Google account'):
+            self.bridge.logout()
+        self.assertEqual(offset, len(self.wire()))
+        self.connect()
+        self.assertFalse(self.bridge.account(refresh=True)['reconnect_required'])
+        self.assertTrue(self.bridge.logout()['logout_completed'])
+
+    def test_uncertain_logout_clears_observations_without_success_or_replay(self):
+        for error in ('SS_AGY_LOGOUT_CRASH', 'SS_AGY_LOGOUT_ERROR'):
+            with self.subTest(error=error), patch.dict(os.environ, {error: '1'}):
+                self.connect()
+                self.assertEqual('available', self.bridge.quota()['status'])
+                with self.assertRaisesRegex(BridgeError, 'could not be confirmed'):
+                    self.bridge.logout()
+                data = self.bridge.account(refresh=True)
+                self.assertTrue(data['login_required'])
+                self.assertEqual('failed', data['login']['status'])
+                self.assertNotIn('NEVER_EXPOSE', json.dumps(data))
+                self.assertEqual('unavailable', self.bridge.quota()['status'])
+                offset = len(self.wire())
+                with self.assertRaises(BridgeError):
+                    self.bridge.logout()
+                self.assertEqual(offset, len(self.wire()))
+
+    def test_logout_timeout_is_bounded_and_never_reports_success(self):
+        self.connect()
+        connection = self.bridge._login_connection
+        with patch.object(connection, 'call', side_effect=BridgeError('timeout')) as call:
+            with self.assertRaisesRegex(BridgeError, 'could not be confirmed'):
+                self.bridge.logout()
+        self.assertEqual(('logout', {}), call.call_args.args)
+        self.assertEqual(15, call.call_args.kwargs['timeout'])
+        self.assertIsNotNone(connection.proc.poll())
+
+    def test_pending_google_login_rejects_logout_without_dispatch(self):
+        self.connect()
+        offset = len(self.wire())
+        self.bridge._login = {'status': 'working'}
+        with patch.object(self.bridge._login_worker, 'is_alive', return_value=True):
+            with self.assertRaisesRegex(BridgeError, 'Finish Google sign-in'):
+                self.bridge.logout()
+        self.assertEqual(offset, len(self.wire()))
+        self.bridge._login = {'status': 'completed'}
 
     def test_selected_model_native_mode_scoped_tools_and_streaming(self):
         self.connect()
