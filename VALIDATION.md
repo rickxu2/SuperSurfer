@@ -27,6 +27,12 @@ may affect other Antigravity clients sharing the login; the UI discloses this.
   signing only; no notarization or downloaded Gatekeeper acceptance claim.
   Workspace archive SHA256:
   `c19694c530d28ff894ac52e0cb9ca58f228074897ccea65b75aa43ff6ff7a5f7`.
+- Authorized local activation verified: desktop PID7652, matching service7650,
+  release `c19694c530d28ff8`, original window/profile and histories preserved;
+  engine54249 unchanged. Native cached Google reconnect completed. Actual Settings
+  shows enabled Sign out with shared-client notice; live quota still available.
+  Real Google Sign out was not clicked for QA. See
+  [reviewed activation evidence](tests/reports/antigravity-account-activation.md).
 - Board check cannot run: the applied checks block has no configured argv.
   No managed-check or preview success is claimed.
 
