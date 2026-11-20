@@ -213,7 +213,8 @@ class ProviderUpdates:
                     continue
                 try:
                     bridge = router._require_account_idle(backend)
-                    if getattr(bridge, '_login', {}).get('status') == 'working':
+                    if (getattr(bridge, '_login', {}).get('status') == 'working'
+                            or (getattr(bridge, '_login_status', None) or {}).get('status') in {'pending', 'working'}):
                         raise BridgeError('Provider sign-in is still working.', 409)
                     if os.environ.get('SUPERSURFER_' + backend.upper()) or backend == 'antigravity' and os.environ.get('ANTIGRAVITY_HARNESS_PATH'):
                         self._record(backend, status='managed_externally', note='Explicit runtime override is pinned; update it through its owner.')

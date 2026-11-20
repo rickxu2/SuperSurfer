@@ -109,3 +109,10 @@ class UpdatesTests(unittest.TestCase):
                 with patch('server.provider_updates.executable',side_effect=installed),patch('server.provider_updates.run',side_effect=lambda cmd,*a,**k:help_text if '--help' in cmd else '1.2.3') as run:
                     self.u.start(force=True);self.wait()
                 self.assertIn(['/official/bin/'+backend,verb],[c.args[0] for c in run.call_args_list]);self.assertEqual(self.u.status()['providers'][backend]['status'],'current')
+
+    def test_pending_codex_device_login_defers_runtime_update(self):
+        self.bridges['codex']._login_status={'status':'pending','loginId':'private'}
+        with patch('server.provider_updates.executable',side_effect=self.installed),patch('server.provider_updates.run') as run:
+            self.u.start(force=True);self.wait();run.assert_not_called()
+        self.assertEqual(self.u.status()['providers']['codex']['status'],'deferred')
+        self.assertNotIn('private',json.dumps(self.u.status()))

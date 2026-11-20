@@ -5,7 +5,7 @@
   initialize-only probe confirms native identity and logout. Bundled source proves
   built-in `/usage` interception before inference and identical quota formatting.
   See [reviewed sources/hashes](tests/reports/provider-runtime-update-sources.md).
-- Ten updater tests pass: persisted opt-in/six-hour schedule, busy-minute deferral,
+- Eleven updater tests pass: persisted opt-in/six-hour schedule, busy-minute deferral,
   per-provider retry bounds, fixed advertised native commands for all four CLIs,
   pinned/missing tools, read-only protection, sanitized failure/no immediate replay,
   checksum failure preserving launcher and identity-before-atomic pair activation.
