@@ -18,6 +18,15 @@ may affect other Antigravity clients sharing the login; the UI discloses this.
   Google logout, model inference or credential inspection was used.
 - `npm test`: 800 Python tests OK (34 skipped); Node 50 passed/5 skipped.
 - Agent capability-skill validation and `git diff --check` passed.
+- Combined local source `67a18d0` preserves installed quota and paused-status
+  fix e6a6145; 803 Python tests OK (34 skipped), Node 50 passed/5 skipped.
+- Darwin arm64 `npm run package:mac` passed. Build and ZIP are in
+  `../supersurfer-antigravity-account-local/dist/`. Original and ZIP-extracted
+  apps passed strict signature, isolated launch and sandbox checks; the exact
+  delivered app passed the Electron account-controls regression. Local/ad-hoc
+  signing only; no notarization or downloaded Gatekeeper acceptance claim.
+  Workspace archive SHA256:
+  `c19694c530d28ff894ac52e0cb9ca58f228074897ccea65b75aa43ff6ff7a5f7`.
 - Board check cannot run: the applied checks block has no configured argv.
   No managed-check or preview success is claimed.
 
